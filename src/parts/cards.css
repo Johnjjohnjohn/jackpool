@@ -1,0 +1,54 @@
+<style>
+/* Jeux de cartes : cartes ivoire, dos bleu nuit et or */
+.stage{height:230px;perspective:1000px}
+.pcard{--cw:104px;width:var(--cw);aspect-ratio:5/7;position:relative;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,.7,.2,1)}
+.pcard.up{transform:rotateY(180deg)}
+.pcard.deal{animation:deal .55s cubic-bezier(.2,.8,.3,1)}
+@keyframes deal{from{translate:0 -60px;rotate:-10deg;opacity:0}to{translate:0 0;rotate:0deg;opacity:1}}
+.cf{position:absolute;inset:0;border-radius:9px;-webkit-backface-visibility:hidden;backface-visibility:hidden;box-shadow:0 12px 24px rgba(0,0,0,.45)}
+.cf.back{background:radial-gradient(circle,rgba(226,176,74,.3),transparent 55%),repeating-linear-gradient(45deg,rgba(226,176,74,.3) 0 1px,transparent 1px 8px),repeating-linear-gradient(-45deg,rgba(226,176,74,.3) 0 1px,transparent 1px 8px),#13214F;
+  box-shadow:inset 0 0 0 5px #F4EEE0,inset 0 0 0 7px rgba(226,176,74,.7),0 12px 24px rgba(0,0,0,.45)}
+.cf.front{transform:rotateY(180deg);background:linear-gradient(160deg,#FFFDF7,#EFE8D8);color:#16192A;font-family:var(--engrave)}
+.cf.front.red{color:#B8162B}
+.ci{position:absolute;display:grid;justify-items:center;line-height:1}
+.ci b{font-size:calc(var(--cw)*.19);font-weight:700}.ci i{font-style:normal;font-size:calc(var(--cw)*.17)}
+.tl{top:6%;left:7%}.br{bottom:6%;right:7%;transform:rotate(180deg)}
+.mid,.ace,.fig{position:absolute;display:grid;place-items:center;align-content:center;line-height:1}
+.mid,.ace{inset:0}
+.mid b{font-size:calc(var(--cw)*.34)}.mid i{font-style:normal;font-size:calc(var(--cw)*.3)}
+.ace{font-size:calc(var(--cw)*.6)}
+.fig{inset:22% 20%;border:1.5px solid currentColor;border-radius:6px;background:linear-gradient(180deg,rgba(226,176,74,.25),rgba(226,176,74,.06))}
+.fig b{font-size:calc(var(--cw)*.36)}.fig i{font-style:normal;font-size:calc(var(--cw)*.2)}
+.pcard.win .cf.front{box-shadow:0 0 0 2px #FFE3A1,0 0 28px 8px rgba(255,210,120,.55)}
+.pcard.lose .cf{filter:brightness(.55);transition:filter .4s}
+.deck{position:relative;width:104px;aspect-ratio:5/7}
+.deck .cf{transform:none}
+.deck .cf:nth-child(1){translate:6px 6px}.deck .cf:nth-child(2){translate:3px 3px}
+.row2{display:flex;align-items:center;gap:26px}
+.duel{display:flex;align-items:flex-start;gap:18px}
+.slot{display:grid;gap:8px;justify-items:center}
+.slot span{font:600 12px var(--body);letter-spacing:.12em;text-transform:uppercase;color:rgba(240,225,190,.75)}
+.vs{align-self:center;margin-top:-20px;font:700 18px var(--engrave);color:var(--gold-hi);text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.stage.big{height:280px}
+.stage.big .pcard,.stage.big .deck{--cw:124px;width:124px}
+.picks3{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:10px;width:min(460px,100%)}
+.pick.num{border-color:rgba(226,176,74,.35);padding:10px 4px 9px}
+.pick.num strong{color:var(--gold-hi);font-size:19px}
+.pick.num[aria-pressed="true"]{background:linear-gradient(180deg,var(--gold-hi),var(--gold));border-color:#fff1c9}
+.pick.num[aria-pressed="true"] strong,.pick.num[aria-pressed="true"] span{color:#3d2805!important}
+.pick strong .sg{font-size:1.15em}
+.tk6{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:8px}
+.tk6 .pick{padding:9px 4px;border-radius:12px;background:var(--soft);border-color:rgba(226,176,74,.3)}
+.tk6 .pick strong{font-size:15px;color:var(--gold-hi)}
+.tk6 .pick span{font-size:12px}
+.rd,.pick.rd strong{color:#FF7C8C!important}.bk,.pick.bk strong{color:#E9ECF5!important}
+.dot{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#3d2805}
+.dot.rd{background:#D8384E;color:#fff!important}.dot.bk{background:#E9ECF5;color:#14172a!important}.dot.eq{background:var(--soft);color:var(--gold-hi)}
+.dist{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:10px;align-items:end;height:70px}
+.dist div{display:grid;gap:3px;justify-items:center;align-self:end}
+.dist i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--gold),rgba(226,176,74,.35));min-height:3px;transition:height .4s}
+.dist i.me{background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.dist span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+li.n{color:var(--gold-hi);border-color:rgba(226,176,74,.35)}
+@media (prefers-reduced-motion:reduce){.pcard{transition:none}.pcard.deal{animation:none}}
+</style>

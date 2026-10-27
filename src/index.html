@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Jackpool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Sora:wght@500;600;700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout : accueil du site. En-tête (marque + solde), bandeau d'accroche avec le prochain tirage, puis une grille de cinq tables de jeu, chacune sur son propre tapis. Look unique, sombre et or. */
+:root{
+  --bg:#0A0E19; --bg2:#121A2E; --card:#141B2C; --edge:rgba(255,255,255,.09); --soft:#1C2539;
+  --ink:#EEF0F6; --muted:#9AA3B8; --gold:#E2B04A; --gold-hi:#FFE3A1; --gold-lo:#8F6118;
+  --red1:#9E2636; --red2:#4C0E19; --blue1:#215A9E; --blue2:#0E2A52; --green1:#1F8656; --green2:#0A4529;
+  --display:"Sora",system-ui,sans-serif; --body:"DM Sans",system-ui,sans-serif; --engrave:"Cinzel",Georgia,serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{min-height:100vh;background:radial-gradient(900px 500px at 85% -10%,rgba(226,176,74,.14),transparent 60%),linear-gradient(180deg,var(--bg2),var(--bg) 55%);background-color:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:22px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--gold-hi),var(--gold) 45%,var(--gold-lo));box-shadow:0 0 0 2px rgba(255,227,161,.25),0 4px 14px rgba(226,176,74,.35);display:grid;place-items:center;font:700 18px var(--engrave);color:#6b4510}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(24px,5vw,32px);line-height:1;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--gold);font-weight:500}
+.tag{font-size:12px;color:var(--muted);letter-spacing:.04em}
+.wallet{background:var(--card);border:1px solid var(--edge);border-radius:999px;padding:6px 8px 6px 14px;display:flex;align-items:center;gap:10px;color:var(--muted);font-weight:500}
+.wallet .chip{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#3d2805;border-radius:999px;padding:2px 12px;font-weight:700;font-variant-numeric:tabular-nums}
+.hero{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;padding:22px;border-radius:22px;border:1px solid rgba(226,176,74,.25);
+  background:radial-gradient(500px 260px at 0% 0%,rgba(226,176,74,.16),transparent 70%),var(--card)}
+.hero h2{font-family:var(--display);font-weight:600;font-size:clamp(20px,4vw,28px);line-height:1.2;margin:0 0 6px;max-width:22ch;text-wrap:balance}
+.hero p{margin:0;color:var(--muted);max-width:52ch}
+.total{display:grid;gap:2px;text-align:right}
+@media (max-width:600px){.total{text-align:left}}
+.total b{font-family:var(--display);font-size:clamp(28px,6vw,40px);font-weight:600;line-height:1;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,var(--gold-hi),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.small{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.when{font-size:13px;color:var(--muted)}
+.games{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px}
+.game{display:grid;grid-template-rows:auto 1fr;border-radius:22px;overflow:hidden;background:var(--card);border:1px solid var(--edge);color:inherit;text-decoration:none;
+  box-shadow:0 18px 40px rgba(0,0,0,.3);transition:transform .2s,border-color .2s}
+.game:hover,.game:focus-visible{transform:translateY(-3px);border-color:rgba(226,176,74,.5)}
+.game:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
+.art{position:relative;height:170px;display:grid;place-items:center;overflow:hidden}
+.art::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(0,0,0,.45))}
+.art.felt{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),radial-gradient(ellipse 80% 70% at 50% 45%,var(--c1),var(--c2))}
+.art.red{--c1:var(--red1);--c2:var(--red2)} .art.blue{--c1:var(--blue1);--c2:var(--blue2)} .art.green{--c1:var(--green1);--c2:var(--green2)}
+.art.sunset{background:linear-gradient(180deg,#1B1E46 0%,#5B3069 38%,#C4566A 60%,#F59A5A 72%,#3A2A55 72.5%,#1A1838 100%)}
+.art.sunset::before{content:"";position:absolute;left:50%;top:72%;width:90px;height:90px;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(#FFE2A8 0 45%,rgba(255,180,110,.35) 46%,transparent 70%);clip-path:inset(0 0 50% 0)}
+.art>*{position:relative;z-index:1}
+/* emblèmes */
+.coin{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#FFF4CC 0%,#F6CF6A 18%,#DDA543 44%,#B07A24 70%,#7A520F 100%);box-shadow:0 12px 24px rgba(0,0,0,.5),inset 0 0 0 5px rgba(150,100,25,.6),inset 0 0 0 9px rgba(255,236,190,.35);transform:rotate(-8deg)}
+.coin b{font:700 46px var(--engrave);color:#7d5412;text-shadow:0 1px 0 rgba(255,238,195,.75)}
+.die{width:84px;height:84px;border-radius:18px;background:radial-gradient(circle at 30% 25%,#FFFDF6,#F1EBDD 55%,#D9D0BC);box-shadow:0 14px 26px rgba(0,0,0,.5),inset 0 -6px 12px rgba(120,100,60,.2);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:14px;transform:rotate(12deg)}
+.die i{width:13px;height:13px;border-radius:50%;margin:auto;background:radial-gradient(circle at 40% 35%,#3a3f52,#11141f 70%)}
+.glasses{display:flex;gap:16px;align-items:flex-end;margin-top:30px}
+.gl{position:relative;width:28px;height:52px;border-radius:2px 2px 7px 7px;border:1.5px solid rgba(255,255,255,.6);background:linear-gradient(180deg,rgba(255,255,255,.08) 0 6px,#FFC86E 6px,#FF8D5C 55%,#D63F5E)}
+.gl::before{content:"";position:absolute;left:55%;bottom:20px;width:6px;height:var(--h);border-radius:0 0 2px 2px;background:linear-gradient(90deg,#A8792F,#F3DDA4 50%,#9A6C26);transform:rotate(8deg);transform-origin:bottom;z-index:-1}
+.gl.short::before{box-shadow:0 0 10px 3px rgba(255,210,120,.7)}
+.cards{position:relative;width:150px;height:110px}
+.pc{position:absolute;width:68px;height:96px;border-radius:7px;background:linear-gradient(160deg,#FFFDF7,#EFE8D8);box-shadow:0 10px 20px rgba(0,0,0,.45);font-family:var(--engrave);color:#16192A;display:grid;place-items:center}
+.pc.red{color:#B8162B}
+.pc .r{position:absolute;top:5px;left:7px;font-size:14px;font-weight:700;line-height:1;text-align:center}
+.pc .s{font-size:34px}
+.pc.back{background:radial-gradient(circle,rgba(226,176,74,.3),transparent 55%),repeating-linear-gradient(45deg,rgba(226,176,74,.3) 0 1px,transparent 1px 7px),repeating-linear-gradient(-45deg,rgba(226,176,74,.3) 0 1px,transparent 1px 7px),#13214F;box-shadow:inset 0 0 0 4px #F4EEE0,0 10px 20px rgba(0,0,0,.45)}
+.vs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 15px var(--engrave);color:var(--gold-hi);text-shadow:0 2px 8px rgba(0,0,0,.8);z-index:2}
+/* infos */
+.cups3{display:flex;gap:12px;align-items:flex-end}
+.cp{width:44px;height:58px;clip-path:polygon(20% 0,80% 0,100% 100%,0 100%);background:linear-gradient(90deg,#5D6573,#AEB6C3 18%,#EEF1F5 34%,#B9C0CC 52%,#7E8794 78%,#4C5360);filter:drop-shadow(0 8px 8px rgba(0,0,0,.45))}
+.cp.up{translate:0 -26px}
+.gball{position:absolute;left:50%;bottom:2px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFF6D2,#F6CF6A 30%,#C8902E 70%,#7A520F);box-shadow:0 0 14px 4px rgba(255,210,120,.6)}
+.art .cups3{position:relative}
+.info{padding:16px 18px 18px;display:grid;gap:10px;align-content:start}
+.info h3{font-family:var(--display);font-weight:600;font-size:19px;margin:0;line-height:1.2}
+.info p{margin:0;color:var(--muted);font-size:14px}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px}
+.odds{font-size:12px;font-weight:700;color:var(--ink);border:1px solid var(--edge);padding:2px 10px;border-radius:999px}
+.jp{font-size:13px;color:var(--muted)}
+.jp b{color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.play{justify-self:start;margin-top:4px;font:700 14px var(--body);color:#3d2805;background:linear-gradient(180deg,var(--gold-hi),var(--gold));padding:7px 18px;border-radius:999px}
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;color:var(--muted);font-size:13px;border-top:1px solid var(--edge);padding-top:16px}
+footer p{margin:0;max-width:60ch}
+.ghost{border:1px solid var(--edge);background:transparent;color:var(--muted);font:500 13px var(--body);padding:7px 12px;border-radius:12px;cursor:pointer}
+.ghost:focus-visible{outline:2px solid var(--gold-hi);outline-offset:2px}
+
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}
+[hidden]{display:none!important}
+.auth{display:grid;gap:14px;padding:22px;border-radius:22px;border:1px solid rgba(226,176,74,.35);background:radial-gradient(500px 260px at 100% 0%,rgba(226,176,74,.16),transparent 70%),var(--card);max-width:460px;width:100%;justify-self:center}
+.auth h2{font-family:var(--display);font-weight:600;font-size:22px;margin:0}
+.auth p{margin:0;color:var(--muted);font-size:14px}
+.tabs{display:flex;gap:4px;background:var(--soft);padding:4px;border-radius:999px;justify-self:start}
+.tabs button{border:0;background:transparent;color:var(--muted);font:600 13px var(--body);padding:7px 14px;border-radius:999px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:rgba(255,255,255,.12);color:var(--ink)}
+.auth form{display:grid;gap:10px}
+.auth label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+.auth input{font:500 16px var(--body);color:var(--ink);background:var(--bg);border:1px solid var(--edge);border-radius:12px;padding:11px 14px}
+.auth input:focus-visible{outline:2px solid var(--gold-hi);outline-offset:1px}
+.btn{border:0;background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#3d2805;font:700 15px var(--body);padding:11px 24px;border-radius:999px;cursor:pointer;justify-self:start}
+.btn:disabled{opacity:.6;cursor:wait}
+.err{color:#FF6E5E;font-size:14px;min-height:1.2em}
+.wallet #who{color:var(--ink);font-weight:700}
+.linkbtn{border:0;background:none;color:var(--muted);font:500 13px var(--body);text-decoration:underline;cursor:pointer;padding:0}
+.refill{border:1px solid rgba(226,176,74,.5);background:transparent;color:var(--gold-hi);font:600 12px var(--body);padding:4px 10px;border-radius:999px;cursor:pointer}
+.games.locked .game{pointer-events:none;opacity:.55}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">J</div>
+      <div><h1>Jack<span>pool</span></h1><div class="tag">Jeux de hasard en cagnotte commune</div></div>
+    </div>
+    <div class="wallet" id="walletBox" hidden><span id="who"></span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button><button class="linkbtn" id="logout">Déconnexion</button></div>
+  </header>
+
+
+  <section class="auth" id="auth" hidden>
+    <div class="tabs" role="group" aria-label="Compte"><button id="tabNew" aria-pressed="true">Créer un compte</button><button id="tabLog" aria-pressed="false">Se connecter</button></div>
+    <h2 id="authTitle">Rejoins la table</h2>
+    <p id="authText">Choisis un pseudo et un mot de passe. Tu reçois 100 crédits virtuels pour jouer.</p>
+    <form id="authForm">
+      <label>Pseudo<input id="name" autocomplete="username" maxlength="20" required></label>
+      <label>Mot de passe<input id="pass" type="password" autocomplete="new-password" minlength="4" required></label>
+      <div class="err" id="authErr"></div>
+      <button class="btn" id="authBtn" type="submit">Créer mon compte</button>
+    </form>
+  </section>
+  <section class="hero">
+    <div>
+      <h2>Une partie par minute, une cagnotte partagée entre les gagnants.</h2>
+      <p>Six tables, de 1 chance sur 2 à 1 chance sur 6. Tout le monde mise le même montant, et les gagnants se partagent la cagnotte, moins 5 %. Quand personne ne gagne, elle part dans la super cagnotte du jeu, tirée à 12 h et 21 h.</p>
+    </div>
+    <div class="total">
+      <span class="small">Total des super cagnottes</span>
+      <b><span id="total">0,00</span> cr</b>
+      <span class="when" id="next"></span>
+    </div>
+  </section>
+
+  <section class="games locked" id="games" aria-label="Les jeux">
+    <a class="game" href="pile-ou-face.html">
+      <div class="art felt red"><div class="coin"><b>1</b></div></div>
+      <div class="info">
+        <h3>Pile ou Face</h3>
+        <p>La pièce d'or est lancée toutes les minutes. Pile ou face ?</p>
+        <div class="meta"><span class="odds">1 chance sur 2</span><span class="jp">Super cagnotte <b data-jp="pof">0,00</b> cr</span></div>
+        <span class="play">Jouer</span>
+      </div>
+    </a>
+    <a class="game" href="de-cagnotte.html">
+      <div class="art felt blue"><div class="die"><i></i><span></span><i></i><span></span><i></i><span></span><i></i><span></span><i></i></div></div>
+      <div class="info">
+        <h3>Le Dé</h3>
+        <p>Choisis un chiffre de 1 à 6 avant que le dé ne roule.</p>
+        <div class="meta"><span class="odds">1 chance sur 6</span><span class="jp">Super cagnotte <b data-jp="de">0,00</b> cr</span></div>
+        <span class="play">Jouer</span>
+      </div>
+    </a>
+    <a class="game" href="courte-paille.html">
+      <div class="art sunset"><div class="glasses"><div class="gl" style="--h:62px"></div><div class="gl short" style="--h:36px"></div><div class="gl" style="--h:62px"></div></div></div>
+      <div class="info">
+        <h3>La Courte Paille</h3>
+        <p>Trois verres, trois pailles, une seule courte. Laquelle ?</p>
+        <div class="meta"><span class="odds">1 chance sur 3</span><span class="jp">Super cagnotte <b data-jp="paille">0,00</b> cr</span></div>
+        <span class="play">Jouer</span>
+      </div>
+    </a>
+    <a class="game" href="la-couleur.html">
+      <div class="art felt green"><div class="cards">
+        <div class="pc back" style="left:14px;top:10px;transform:rotate(-10deg)"></div>
+        <div class="pc red" style="left:62px;top:6px;transform:rotate(8deg)"><span class="r">A<br>&#x2665;&#xFE0E;</span><span class="s">&#x2665;&#xFE0E;</span></div>
+      </div></div>
+      <div class="info">
+        <h3>La Couleur</h3>
+        <p>Une carte est tirée : cœur, carreau, trèfle ou pique ?</p>
+        <div class="meta"><span class="odds">1 chance sur 4</span><span class="jp">Super cagnotte <b data-jp="couleur">0,00</b> cr</span></div>
+        <span class="play">Jouer</span>
+      </div>
+    </a>
+    <a class="game" href="la-bataille.html">
+      <div class="art felt green"><div class="cards">
+        <div class="pc" style="left:6px;top:8px;transform:rotate(-9deg)"><span class="r">R<br>&#x2660;&#xFE0E;</span><span class="s">&#x2660;&#xFE0E;</span></div>
+        <div class="pc back" style="left:76px;top:8px;transform:rotate(9deg)"></div>
+        <span class="vs">VS</span>
+      </div></div>
+      <div class="info">
+        <h3>La Bataille</h3>
+        <p>Deux cartes face cachée. Gauche ou droite, la plus forte l'emporte.</p>
+        <div class="meta"><span class="odds">1 chance sur 2</span><span class="jp">Super cagnotte <b data-jp="bataille">0,00</b> cr</span></div>
+        <span class="play">Jouer</span>
+      </div>
+    </a>
+    <a class="game" href="les-gobelets.html">
+      <div class="art felt red"><div class="cups3"><div class="cp"></div><div class="cp up"></div><div class="cp"></div><span class="gball"></span></div></div>
+      <div class="info">
+        <h3>Les Gobelets</h3>
+        <p>Cinq gobelets, une seule boule d'or. Sauras-tu la trouver ?</p>
+        <div class="meta"><span class="odds">1 chance sur 5</span><span class="jp">Super cagnotte <b data-jp="gobelets">0,00</b> cr</span></div>
+        <span class="play">Jouer</span>
+      </div>
+    </a>
+  </section>
+
+  <footer>
+    <p>Version de test avec des crédits virtuels sans valeur réelle. Réservé aux plus de 18 ans. Jouer comporte des risques : endettement, isolement, dépendance.</p>
+    
+  </footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=c=>(c/100).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+let token=null,mode="new",ws=null,me=null,jackpots={},nextDraw=0,offset=0,retry=0;
+try{token=localStorage.getItem("jp-token")}catch(e){}
+function setMode(m){mode=m;$("tabNew").setAttribute("aria-pressed",m==="new");$("tabLog").setAttribute("aria-pressed",m==="log");
+  $("authTitle").textContent=m==="new"?"Rejoins la table":"Content de te revoir";
+  $("authText").textContent=m==="new"?"Choisis un pseudo et un mot de passe. Tu reçois 100 crédits virtuels pour jouer.":"Entre ton pseudo et ton mot de passe.";
+  $("authBtn").textContent=m==="new"?"Créer mon compte":"Me connecter";$("pass").autocomplete=m==="new"?"new-password":"current-password";$("authErr").textContent=""}
+$("tabNew").onclick=()=>setMode("new");$("tabLog").onclick=()=>setMode("log");
+$("authForm").addEventListener("submit",async e=>{e.preventDefault();$("authBtn").disabled=true;$("authErr").textContent="";
+  try{const r=await fetch(mode==="new"?"/api/register":"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("name").value,pass:$("pass").value})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||"Erreur");token=d.token;try{localStorage.setItem("jp-token",token)}catch(e){}start()}
+  catch(err){$("authErr").textContent=err.message==="Failed to fetch"?"Le serveur ne répond pas. Réessaie dans une minute.":err.message}
+  finally{$("authBtn").disabled=false}});
+$("logout").onclick=()=>{try{localStorage.removeItem("jp-token")}catch(e){}location.reload()};
+$("refill").onclick=()=>ws&&ws.readyState===1&&ws.send(JSON.stringify({t:"refill"}));
+function showAuth(){$("auth").hidden=false;$("walletBox").hidden=true;$("games").classList.add("locked")}
+function start(){$("auth").hidden=true;connect()}
+function connect(){
+  ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws?token="+encodeURIComponent(token));
+  ws.onmessage=e=>{const m=JSON.parse(e.data);
+    if(m.t==="auth"&&!m.ok){try{localStorage.removeItem("jp-token")}catch(e){}token=null;ws.onclose=null;showAuth();return}
+    if(m.t==="hello"){me=m.me;jackpots=m.jackpots;nextDraw=m.nextDraw;offset=m.now-Date.now();retry=0;$("walletBox").hidden=false;$("games").classList.remove("locked")}
+    if(m.t==="balance"&&me)me.balance=m.balance;
+    if(m.t==="jackpots"){jackpots=m.jackpots;nextDraw=m.nextDraw}
+    render()};
+  ws.onclose=()=>setTimeout(connect,Math.min(8000,1000*++retry));
+}
+function render(){
+  if(me){$("who").textContent=me.name;$("bal").textContent=fmt(me.balance);$("refill").hidden=me.balance>=100}
+  let t=0;document.querySelectorAll("[data-jp]").forEach(el=>{const v=jackpots[el.dataset.jp]||0;t+=v;el.textContent=fmt(v)});
+  $("total").textContent=fmt(t);
+  if(nextDraw){const ms=nextDraw-(Date.now()+offset),h=Math.max(0,Math.floor(ms/3600000)),m=Math.max(0,Math.floor(ms%3600000/60000));
+    const hh=new Date(nextDraw).toLocaleTimeString("fr-FR",{hour:"numeric",timeZone:"Europe/Paris"}).replace(":00","").replace(" h","");
+    $("next").textContent=`Prochains tirages à ${hh} h, dans ${h} h ${String(m).padStart(2,"0")} min`}
+}
+setInterval(render,30000);
+if(token)start();else showAuth();
+render();
+</script>
+</html>

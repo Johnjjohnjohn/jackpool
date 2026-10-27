@@ -1,0 +1,17 @@
+{
+  "name": "jackpool",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Jackpool : jeux de hasard en cagnotte commune (version de test, crédits virtuels)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "pg": "^8.11.0",
+    "ws": "^8.16.0"
+  }
+}

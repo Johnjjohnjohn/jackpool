@@ -1,0 +1,12 @@
+<style>
+/* Tapis de jeu : feutrine vert, rouge ou bleu */
+.scene.felt{--f1:#1F8656;--f2:#126A42;--f3:#0A4529;--f4:#05261A;background:
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"),
+  radial-gradient(ellipse 70% 55% at 50% 42%,var(--f1) 0%,var(--f2) 40%,var(--f3) 75%,var(--f4) 100%)}
+.game[data-felt="rouge"] .scene.felt{--f1:#9E2636;--f2:#7A1A2B;--f3:#4C0E19;--f4:#25060C}
+.game[data-felt="bleu"] .scene.felt{--f1:#215A9E;--f2:#18447C;--f3:#0E2A52;--f4:#06152C}
+.scene.felt::before{content:"";position:absolute;left:-25%;right:-25%;top:22%;height:56%;border-radius:50%;border:2px solid rgba(230,196,120,.32);box-shadow:0 0 0 8px rgba(230,196,120,.06)}
+.scene.felt::after{background:radial-gradient(ellipse at 50% 45%,transparent 50%,rgba(0,0,0,.45))}
+.printed{font:600 11px var(--engrave);letter-spacing:.3em;color:rgba(235,205,140,.5);text-transform:uppercase;margin-top:-8px}
+.stage::before{background:radial-gradient(rgba(255,240,200,.18),transparent 65%)}
+</style>

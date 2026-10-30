@@ -97,6 +97,8 @@ footer p{margin:0;max-width:60ch}
 .btn:disabled{opacity:.6;cursor:wait}
 .err{color:#FF6E5E;font-size:14px;min-height:1.2em}
 .wallet #who{color:var(--ink);font-weight:700}
+.banklink{color:var(--gold-hi);font:600 13px var(--body);text-decoration:none;border:1px solid rgba(226,176,74,.45);padding:3px 10px;border-radius:999px}
+.banklink:hover,.banklink:focus-visible{background:rgba(226,176,74,.12)}
 .linkbtn{border:0;background:none;color:var(--muted);font:500 13px var(--body);text-decoration:underline;cursor:pointer;padding:0}
 .gainbox{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:grid;gap:8px;width:min(420px,calc(100% - 32px))}
 .gain{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;background:linear-gradient(180deg,#3a2a0e,#241906);color:var(--gold-hi);border:1px solid rgba(226,176,74,.7);border-radius:16px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.5);font:500 14px/1.35 var(--body)}
@@ -111,7 +113,7 @@ footer p{margin:0;max-width:60ch}
       <div class="logo">J</div>
       <div><h1>Jack<span>pool</span></h1><div class="tag">Jeux de hasard en cagnotte commune</div></div>
     </div>
-    <div class="wallet" id="walletBox" hidden><span id="who"></span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button><button class="linkbtn" id="logout">Déconnexion</button></div>
+    <div class="wallet" id="walletBox" hidden><span id="who"></span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button><a class="banklink" id="bankLink" href="banque.html" hidden>🏦 Banque</a><button class="linkbtn" id="logout">Déconnexion</button></div>
   </header>
 
 
@@ -231,10 +233,11 @@ function connect(){
   ws=new WebSocket((location.protocol==="https:"?"wss://":"ws://")+location.host+"/ws?token="+encodeURIComponent(token));
   ws.onmessage=e=>{const m=JSON.parse(e.data);
     if(m.t==="auth"&&!m.ok){try{localStorage.removeItem("jp-token")}catch(e){}token=null;ws.onclose=null;showAuth();return}
-    if(m.t==="hello"){me=m.me;jackpots=m.jackpots;nextDraw=m.nextDraw;offset=m.now-Date.now();retry=0;$("walletBox").hidden=false;$("games").classList.remove("locked")}
+    if(m.t==="hello"){$("bankLink").hidden=!(m.me.admin||m.bankPublic);me=m.me;jackpots=m.jackpots;nextDraw=m.nextDraw;offset=m.now-Date.now();retry=0;$("walletBox").hidden=false;$("games").classList.remove("locked")}
     if(m.t==="balance"&&me)me.balance=m.balance;
     if(m.t==="jackpots"){jackpots=m.jackpots;nextDraw=m.nextDraw}
     if(m.t==="biggain")gainToast(m);
+    if(m.t==="bankvis"&&me)$("bankLink").hidden=!(me.admin||m.on);
     render()};
   ws.onclose=()=>setTimeout(connect,Math.min(8000,1000*++retry));
 }

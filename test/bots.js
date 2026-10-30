@@ -210,11 +210,17 @@ function check(bots, startedRound) {
     if (w !== d.winners) fail(`Super cagnotte ${NAMES[d.game]} : ${d.winners} gagnants annoncés, ${w} recalculés`);
   }
 
+  // 6 bis. La commission enregistrée par la banque = la commission recalculée
+  const feesRows = all("SELECT src, SUM(amount) AS a, SUM(human) AS h FROM fees GROUP BY src");
+  const fp = (feesRows.find((x) => x.src === "parties") || { a: 0 }).a, ft = (feesRows.find((x) => x.src === "tickets") || { a: 0 }).a;
+
   // 7. Aucun crédit créé ni perdu
   const feeTickets = tickets.length * (TICKET - Math.round(TICKET * 0.95));
   const pending = bets.filter((b) => !b.settled).reduce((a, b) => a + b.stake, 0);
   const before = users.length * START + Object.values(START_JACKPOT).reduce((a, b) => a + b, 0);
   const after = users.reduce((a, u) => a + u.balance, 0) + jackpots.reduce((a, j) => a + j.amount, 0) + pending + feeRounds + feeTickets;
+  if (fp !== feeRounds) fail(`Banque : ${cr(fp)} enregistrés sur les parties, ${cr(feeRounds)} recalculés`);
+  if (ft !== feeTickets) fail(`Banque : ${cr(ft)} enregistrés sur les tickets, ${cr(feeTickets)} recalculés`);
   if (before !== after) fail(`Crédits : ${cr(before)} au départ, ${cr(after)} retrouvés (écart ${cr(after - before)})`);
 
   return { missedOk, unnotified, winnersCount: drawWinners.size, stats, outcomes, rounds: rounds.length, feeRounds, feeTickets, tickets: tickets.length, draws, checkedPayouts, before, after,
@@ -271,7 +277,7 @@ function check(bots, startedRound) {
     console.log(`  partagées entre gagnants : ${r.outcomes.split}, tout le monde gagne : ${r.outcomes.allwin}, personne ne gagne : ${r.outcomes.nobody}, égalités (Bataille) : ${r.outcomes.tie}`);
     console.log(`Gains vérifiés un par un : ${r.checkedPayouts}`);
     console.log(`Tickets de super cagnotte : ${r.tickets}`);
-    console.log(`Commission encaissée : ${cr(r.feeRounds)} sur les parties + ${cr(r.feeTickets)} sur les tickets`);
+    console.log(`Commission encaissée : ${cr(r.feeRounds)} sur les parties + ${cr(r.feeTickets)} sur les tickets (identique à la page Banque)`);
     console.log("\nPar jeu :");
     for (const g of GAMES) {
       const s = r.stats[g]; if (!s) { console.log(`  ${NAMES[g]} : aucune partie`); continue; }

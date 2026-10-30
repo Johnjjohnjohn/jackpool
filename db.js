@@ -92,6 +92,10 @@ async function init() {
     `CREATE TABLE IF NOT EXISTS notices (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, game TEXT NOT NULL, gain INTEGER NOT NULL,
       tickets INTEGER NOT NULL, created BIGINT NOT NULL, seen INTEGER NOT NULL DEFAULT 0)`,
     `CREATE INDEX IF NOT EXISTS notices_open ON notices (user_id, seen)`,
+    // Commission encaissée par la banque, par jour (heure de Paris), par jeu et par source (parties / tickets).
+    // human = la part payée par de vrais joueurs (le reste vient des bots).
+    `CREATE TABLE IF NOT EXISTS fees (day TEXT NOT NULL, game TEXT NOT NULL, src TEXT NOT NULL, amount INTEGER NOT NULL,
+      human INTEGER NOT NULL, PRIMARY KEY (day, game, src))`,
   ];
   for (const s of ddl) await query(s);
   // Ajout de la colonne « bot » aux bases déjà créées (ignoré si elle existe déjà)

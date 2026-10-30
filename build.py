@@ -236,4 +236,5 @@ for g in GAMES:
     open(os.path.join(OUT, g["file"]), "w", encoding="utf-8").write(html)
 shutil.copy(os.path.join(SRC, "client.js"), os.path.join(OUT, "client.js"))
 shutil.copy(os.path.join(SRC, "index.html"), os.path.join(OUT, "index.html"))
+shutil.copy(os.path.join(SRC, "banque.html"), os.path.join(OUT, "banque.html"))
 print("Pages fabriquées dans", OUT)

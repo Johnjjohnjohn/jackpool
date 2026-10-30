@@ -57,6 +57,41 @@ function nextDrawAfter(t) {
   return Math.min(...c.filter((x) => x > t));
 }
 
+const parisDay = (ms = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(ms)); // « 2026-10-30 »
+
+// ---------- Banque : commission encaissée ----------
+const bankHistory = []; // commission de chaque tour (dernière heure), en mémoire
+let bankPublic = false; // l'administrateur peut rendre la page Banque visible à tous les joueurs
+const canSeeBank = (c) => c.user && (c.user.admin || bankPublic);
+let feesThisRound = 0;
+async function addFee(q, game, src, amount, human) {
+  if (amount <= 0) return;
+  await q.query(`INSERT INTO fees (day,game,src,amount,human) VALUES ($1,$2,$3,$4,$5)
+    ON CONFLICT (day,game,src) DO UPDATE SET amount=fees.amount+EXCLUDED.amount, human=fees.human+EXCLUDED.human`,
+    [parisDay(), game, src, amount, human]);
+}
+async function bankMsg() {
+  const rows = await db.query("SELECT day, game, src, amount, human FROM fees");
+  const today = parisDay();
+  const sum = (f) => rows.filter(f).reduce((a, r) => ({ amount: a.amount + r.amount, human: a.human + r.human }), { amount: 0, human: 0 });
+  const games = {};
+  for (const g in GAMES) games[g] = { today: sum((r) => r.game === g && r.day === today), total: sum((r) => r.game === g) };
+  const days = {};
+  for (const r of rows) days[r.day] = (days[r.day] || 0) + r.amount;
+  return {
+    t: "bank", now: Date.now(), roundMs: ROUND_MS,
+    today: sum((r) => r.day === today), total: sum(() => true),
+    parties: sum((r) => r.day === today && r.src === "parties"), tickets: sum((r) => r.day === today && r.src === "tickets"),
+    games, days: Object.entries(days).sort().slice(-14), history: bankHistory, jackpots, public: bankPublic, since: rows.length ? Object.keys(days).sort()[0] : today,
+  };
+}
+async function pushBank() {
+  const admins = [...clients].filter((c) => c.bank && canSeeBank(c));
+  if (!admins.length) return;
+  const m = await bankMsg();
+  for (const c of admins) send(c, m);
+}
+
 // ---------- Comptes ----------
 const hash = (pass, salt) => crypto.scryptSync(pass, salt, 32).toString("hex");
 const newId = () => crypto.randomUUID();
@@ -178,7 +213,7 @@ async function settleRound(round) {
     const res = GAMES[game].draw();
     // Lecture des mises et paiements dans une seule transaction : aucune mise ne peut se glisser entre les deux.
     const { bets, winners, outcome, share, toJackpot, pot, gains } = await db.tx(async (q) => {
-      const bets = await q.query("SELECT user_id, choice, stake FROM bets WHERE game=$1 AND lvl=$2 AND round=$3 AND settled=0", [game, lvl, round]);
+      const bets = await q.query("SELECT b.user_id, b.choice, b.stake, u.is_bot FROM bets b JOIN users u ON u.id=b.user_id WHERE b.game=$1 AND b.lvl=$2 AND b.round=$3 AND b.settled=0", [game, lvl, round]);
       const pot = bets.reduce((a, b) => a + b.stake, 0);
       const winners = res.win === null ? [] : bets.filter((b) => b.choice === res.win);
       let outcome = "empty", share = 0, toJackpot = 0;
@@ -189,6 +224,11 @@ async function settleRound(round) {
       else { outcome = "split"; share = Math.floor((pot * (1 - FEE)) / winners.length); for (const b of winners) gains.set(b.user_id, share); }
       for (const [uid, g] of gains) await q.query("UPDATE users SET balance=balance+$1 WHERE id=$2", [g, uid]);
       if (toJackpot) await q.query("UPDATE jackpots SET amount=amount+$1 WHERE game=$2", [toJackpot, game]);
+      // Commission de la banque : ce qui n'est ni redistribué ni versé à la super cagnotte
+      const fee = pot - toJackpot - [...gains.values()].reduce((a, g) => a + g, 0);
+      const humanStake = bets.filter((b) => !b.is_bot).reduce((a, b) => a + b.stake, 0);
+      await addFee(q, game, "parties", fee, pot ? Math.round((fee * humanStake) / pot) : 0);
+      feesThisRound += fee;
       await q.query("UPDATE bets SET settled=1 WHERE game=$1 AND lvl=$2 AND round=$3", [game, lvl, round]);
       await q.query("INSERT INTO rounds (game,lvl,round,result,pot,winners,players,created) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
         [game, lvl, round, JSON.stringify(res), pot, winners.length, bets.length, Date.now()]);
@@ -206,7 +246,11 @@ async function settleRound(round) {
     t.bets.clear();
     for (const uid of myBets.keys()) await pushBalance(uid);
   }
+  bankHistory.push({ round, at: (round + 1) * ROUND_MS, amount: feesThisRound });
+  feesThisRound = 0;
+  while (bankHistory.length > Math.max(60, Math.ceil(3600000 / ROUND_MS))) bankHistory.shift();
   pushJackpots();
+  await pushBank().catch((e) => console.error("Banque :", e));
 }
 
 // ---------- Super cagnottes ----------
@@ -219,8 +263,10 @@ async function buyTicket(c, { game, choice }) {
     if (!r.length) throw new Error("Solde insuffisant pour un ticket.");
     await q.query("INSERT INTO tickets (id,game,user_id,choice,draw_at) VALUES ($1,$2,$3,$4,$5)", [newId(), game, c.user.id, choice, nextDraw]);
     await q.query("UPDATE jackpots SET amount=amount+$1 WHERE game=$2", [add, game]);
+    await addFee(q, game, "tickets", TICKET - add, c.user.bot ? 0 : TICKET - add);
   });
   jackpots[game] += add;
+  feesThisRound += TICKET - add;
   await pushBalance(c.user.id);
   await pushTickets(game);
   pushJackpots();
@@ -318,6 +364,8 @@ async function boot() {
   const last = await db.query("SELECT value FROM meta WHERE key='lastDraw'");
   if (!last.length) await db.query("INSERT INTO meta (key,value) VALUES ('lastDraw',$1)", [String(Date.now())]);
   nextDraw = nextDrawAfter(last.length ? Number(last[0].value) : Date.now());
+  const bp = await db.query("SELECT value FROM meta WHERE key='bankPublic'");
+  bankPublic = bp.length ? bp[0].value === "1" : false;
   setInterval(tick, 250);
   // Bots de la version de test (seulement si BOTS_PER_TABLE est réglé)
   await startBots({ db, GAMES, STAKES, START_BALANCE, ROUND_MS, placeBet, buyTicket, currentRound: () => currentRound });
@@ -377,7 +425,7 @@ wss.on("connection", async (ws, req) => {
   ws.on("pong", () => (ws.alive = true));
   clients.add(ws);
   send(ws, { t: "hello", me: { name: user.name, balance: user.balance, admin: !!user.is_admin }, stakes: STAKES, ticket: TICKET, fee: FEE,
-    roundMs: ROUND_MS, now: Date.now(), jackpots, nextDraw });
+    roundMs: ROUND_MS, now: Date.now(), jackpots, nextDraw, bankPublic });
   ws.on("close", () => clients.delete(ws));
   ws.on("message", async (raw) => {
     let m;
@@ -400,6 +448,16 @@ wss.on("connection", async (ws, req) => {
         if (!GAMES[m.game]) throw new Error("Jeu inconnu.");
         await runDraw(m.game, Number.MAX_SAFE_INTEGER);
         pushJackpots();
+      } else if (m.t === "bank") {
+        if (!canSeeBank(ws)) throw new Error("Page réservée à l'administrateur.");
+        ws.bank = true;
+        send(ws, await bankMsg());
+      } else if (m.t === "bankpublic") {
+        if (!ws.user.admin) throw new Error("Réservé à l'administrateur.");
+        bankPublic = !!m.on;
+        await db.query("INSERT INTO meta (key,value) VALUES ('bankPublic',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", [bankPublic ? "1" : "0"]);
+        toAll({ t: "bankvis", on: bankPublic });
+        await pushBank();
       } else if (m.t === "ping") send(ws, { t: "pong", now: Date.now() });
     } catch (e) {
       send(ws, { t: "error", message: e.message || "Erreur", req: m.t });

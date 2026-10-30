@@ -8,6 +8,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const db = require("./db");
+const { startBots } = require("./bots");
 
 // ---------- Réglages ----------
 const PORT = process.env.PORT || 3000;
@@ -66,10 +67,11 @@ async function register(name, pass) {
   pass = String(pass || "");
   if (!NAME_RE.test(name)) throw new Error("Le pseudo doit faire de 2 à 20 caractères (lettres, chiffres, espace, tiret).");
   if (pass.length < 4) throw new Error("Le mot de passe doit faire au moins 4 caractères.");
+  if (/btz/i.test(name)) throw new Error("Ce pseudo est réservé aux bots de test.");
   const key = name.toLowerCase();
   const user = await db.tx(async (q) => {
     if ((await q.query("SELECT id FROM users WHERE name_key=$1", [key])).length) throw new Error("Ce pseudo est déjà pris.");
-    const count = (await q.query("SELECT COUNT(*) AS n FROM users"))[0].n;
+    const count = (await q.query("SELECT COUNT(*) AS n FROM users WHERE is_bot=0"))[0].n;
     const salt = crypto.randomBytes(16).toString("hex");
     const u = { id: newId(), name, is_admin: Number(count) === 0 ? 1 : 0 }; // le premier compte créé est administrateur
     await q.query("INSERT INTO users (id,name,name_key,pass,balance,is_admin,created) VALUES ($1,$2,$3,$4,$5,$6,$7)",
@@ -79,7 +81,7 @@ async function register(name, pass) {
   return newSession(user.id);
 }
 async function login(name, pass) {
-  const rows = await db.query("SELECT id,pass FROM users WHERE name_key=$1", [String(name || "").trim().toLowerCase()]);
+  const rows = await db.query("SELECT id,pass FROM users WHERE name_key=$1 AND is_bot=0", [String(name || "").trim().toLowerCase()]);
   if (!rows.length) throw new Error("Pseudo ou mot de passe incorrect.");
   const [salt, h] = rows[0].pass.split(":");
   const ok = crypto.timingSafeEqual(Buffer.from(h, "hex"), Buffer.from(hash(String(pass || ""), salt), "hex"));
@@ -116,7 +118,7 @@ function tableMsg(key, c) {
   const t = tables[key];
   return {
     t: "table", game, lvl: Number(lvl), round: currentRound, closesAt: (currentRound + 1) * ROUND_MS, now: Date.now(),
-    bets: [...t.bets.entries()].map(([uid, b]) => ({ name: b.name, choice: b.choice, me: c.user && uid === c.user.id })),
+    bets: [...t.bets.entries()].map(([uid, b]) => ({ name: b.name, choice: b.choice, bot: !!b.bot, me: c.user && uid === c.user.id })),
     history: t.history,
   };
 }
@@ -133,6 +135,7 @@ async function pushTickets(game) {
   for (const c of clients) if (c.sub && c.sub.startsWith(game + ":")) send(c, await ticketsMsg(game, c));
 }
 async function pushBalance(uid) {
+  if (![...clients].some((c) => c.user && c.user.id === uid)) return; // personne de connecté sur ce compte (bots compris)
   const r = await db.query("SELECT balance FROM users WHERE id=$1", [uid]);
   if (r[0]) toUser(uid, { t: "balance", balance: r[0].balance });
 }
@@ -163,7 +166,7 @@ async function placeBet(c, { game, lvl, choice }) {
   });
   if (round !== currentRound) return; // le tour s'est terminé pendant l'enregistrement : le règlement s'en occupe
   if (choice === null) t.bets.delete(uid);
-  else t.bets.set(uid, { name: c.user.name, choice, stake });
+  else t.bets.set(uid, { name: c.user.name, choice, stake, bot: !!c.user.bot });
   toTable(key, (cc) => tableMsg(key, cc));
   await pushBalance(uid);
 }
@@ -309,13 +312,15 @@ async function boot() {
     console.log(`${stale.length} mise(s) remboursée(s) après redémarrage.`);
   }
   // … et on reprend celles du tour en cours.
-  for (const b of await db.query("SELECT b.game,b.lvl,b.user_id,b.choice,b.stake,u.name FROM bets b JOIN users u ON u.id=b.user_id WHERE b.settled=0 AND b.round=$1", [currentRound])) {
-    tables[b.game + ":" + b.lvl].bets.set(b.user_id, { name: b.name, choice: b.choice, stake: b.stake });
+  for (const b of await db.query("SELECT b.game,b.lvl,b.user_id,b.choice,b.stake,u.name,u.is_bot FROM bets b JOIN users u ON u.id=b.user_id WHERE b.settled=0 AND b.round=$1", [currentRound])) {
+    tables[b.game + ":" + b.lvl].bets.set(b.user_id, { name: b.name, choice: b.choice, stake: b.stake, bot: !!b.is_bot });
   }
   const last = await db.query("SELECT value FROM meta WHERE key='lastDraw'");
   if (!last.length) await db.query("INSERT INTO meta (key,value) VALUES ('lastDraw',$1)", [String(Date.now())]);
   nextDraw = nextDrawAfter(last.length ? Number(last[0].value) : Date.now());
   setInterval(tick, 250);
+  // Bots de la version de test (seulement si BOTS_PER_TABLE est réglé)
+  await startBots({ db, GAMES, STAKES, START_BALANCE, ROUND_MS, placeBet, buyTicket, currentRound: () => currentRound });
   // Ménage : on oublie l'historique détaillé de plus de 3 jours.
   setInterval(() => {
     const old = Date.now() - 3 * 86400000;

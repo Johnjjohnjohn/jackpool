@@ -94,6 +94,8 @@ async function init() {
     `CREATE INDEX IF NOT EXISTS notices_open ON notices (user_id, seen)`,
   ];
   for (const s of ddl) await query(s);
+  // Ajout de la colonne « bot » aux bases déjà créées (ignoré si elle existe déjà)
+  await query("ALTER TABLE users ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0").catch(() => {});
 }
 
 module.exports = { query, tx, exclusive, init, kind: usePg ? "postgres" : "sqlite" };

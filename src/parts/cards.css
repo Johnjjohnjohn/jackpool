@@ -44,7 +44,7 @@
 .rd,.pick.rd strong{color:#FF7C8C!important}.bk,.pick.bk strong{color:#E9ECF5!important}
 .dot{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#3d2805}
 .dot.rd{background:#D8384E;color:#fff!important}.dot.bk{background:#E9ECF5;color:#14172a!important}.dot.eq{background:var(--soft);color:var(--gold-hi)}
-.dist{display:grid;grid-template-columns:repeat(var(--cols,3),minmax(0,1fr));gap:10px;align-items:end;height:70px}
+.dist{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;align-items:end;min-height:70px;margin-bottom:6px}
 .dist div{display:grid;gap:3px;justify-items:center;align-self:end}
 .dist i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--gold),rgba(226,176,74,.35));min-height:3px;transition:height .4s}
 .dist i.me{background:linear-gradient(180deg,var(--gold-hi),var(--gold))}

@@ -22,6 +22,7 @@ COMMON_CSS = """<style>
 .refill{border:1px solid rgba(226,176,74,.5);background:transparent;color:var(--gold-hi);font:600 12px var(--body);padding:4px 10px;border-radius:999px;cursor:pointer}
 .status{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:#2a1d0c;color:var(--gold-hi);border:1px solid rgba(226,176,74,.5);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,.4);max-width:calc(100% - 32px);text-align:center}
 .note.err{color:var(--lose)}
+.botb{display:inline-block;margin-right:4px;font-size:.95em;filter:saturate(.8)}.n.bot{opacity:.85}
 .pick.num.pile strong{color:var(--pile)!important}.pick.num.face strong{color:var(--face)!important}
 .dot.pile{background:var(--pile);color:#0A0E19}.dot.face{background:var(--face);color:#0A0E19}
 </style>

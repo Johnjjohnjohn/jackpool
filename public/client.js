@@ -105,7 +105,7 @@
       $("odd" + k).textContent = w === all ? "mise rendue" : "gain ≈ " + fmt(Math.floor((all * stake * (1 - FEE)) / w));
       const b = $("pk" + k); b.setAttribute("aria-pressed", !!(mine && mine.choice === k)); b.disabled = !open;
     });
-    $("players").innerHTML = bets.map((p) => `<li class="n${p.me ? " me" : ""}">${p.me ? "Toi" : esc(p.name)} · <span class="${G.cls(p.choice)}">${G.tag(p.choice)}</span></li>`).join("") || '<span class="empty">Personne n\'a encore misé à cette table</span>';
+    $("players").innerHTML = bets.map((p) => `<li class="n${p.me ? " me" : ""}${p.bot ? " bot" : ""}">${p.me ? "Toi" : (p.bot ? '<span class="botb" title="Bot de test">🤖</span>' : "") + esc(p.name)} · <span class="${G.cls(p.choice)}">${G.tag(p.choice)}</span></li>`).join("") || '<span class="empty">Personne n\'a encore misé à cette table</span>';
     $("hist").innerHTML = (table ? table.history : []).map((h) => `<span class="dot ${G.cls(h)}">${G.tag(h)}</span>`).join("") || '<span class="empty">Aucun tirage encore</span>';
     // super cagnotte
     $("jp").textContent = fmt(jackpots[G.key] || 0);

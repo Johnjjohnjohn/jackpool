@@ -36,7 +36,7 @@ const fail = (m) => problems.push(m);
 // ---------- Serveur privé ----------
 function startServer() {
   const srv = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, DATABASE_URL: "", PORT: String(PORT), ROUND_MS: String(ROUND_MS), SQLITE_FILE: DBFILE },
+    env: { ...process.env, DATABASE_URL: "", BOTS_PER_TABLE: "0", PORT: String(PORT), ROUND_MS: String(ROUND_MS), SQLITE_FILE: DBFILE },
     stdio: ["ignore", "pipe", "pipe"],
   });
   srv.stderr.on("data", (d) => { const s = String(d); if (!/ExperimentalWarning|--trace-warnings/.test(s)) fail("Erreur du serveur : " + s.trim()); });

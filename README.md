@@ -13,6 +13,11 @@ Version de test de Jackpool : six jeux de hasard en cagnotte commune, joués ave
 
 - `DATABASE_URL` : l'adresse de la base PostgreSQL (Neon). Sans elle, le serveur utilise un fichier SQLite local.
 - `PORT` : fourni automatiquement par l'hébergeur.
+- `BOTS_PER_TABLE` : nombre de bots qui jouent à chaque table (par exemple `10`, maximum 20). Sans cette variable, aucun bot ne joue. Les bots portent un prénom en B suivi de « btz » et d'un numéro (ex. « Bruno btz1 »), un badge 🤖 les signale aux joueurs, et ils jouent uniquement avec des crédits virtuels. Ce pseudo est réservé : un vrai joueur ne peut pas le prendre. **À laisser éteint pour toute version avec argent réel.**
+
+## Tester les comptes avec des bots
+
+`node test/bots.js` lance une copie privée du site sur une base jetable, y fait jouer 60 bots, tire les super cagnottes et vérifie que chaque crédit est compté.
 
 ## Règles importantes
 

@@ -42,6 +42,7 @@
     else if (m.t === "jackpots") { jackpots = m.jackpots; nextDraw = m.nextDraw; }
     else if (m.t === "result") { if (m.game === G.key && m.lvl === lvl) onResult(m); }
     else if (m.t === "bigdraw") { if (m.game === G.key) onBigDraw(m); }
+    else if (m.t === "biggain") { gainToast(m); confetti(); }
     else if (m.t === "error") {
       if (m.req === "ticket" || m.req === "drawnow") { $("jpMsg").textContent = m.message; $("jpMsg").className = "note err"; }
       else { $("msg").className = "msg glass lose"; $("msg").textContent = m.message; }
@@ -159,6 +160,28 @@
       }
       drawing = false; $("ovMsg").className = cls; $("ovMsg").textContent = txt; $("ovClose").hidden = false; render();
     }, (G.bigMs || 4200));
+  }
+
+  // ---------- Gain de super cagnotte remporté sur un autre jeu ----------
+  const GAME_NAMES = { pof: ["Pile ou face", "pile-ou-face.html"], de: ["Dé", "de-cagnotte.html"], paille: ["Courte paille", "courte-paille.html"],
+    couleur: ["La Couleur", "la-couleur.html"], bataille: ["La Bataille", "la-bataille.html"], gobelets: ["Les gobelets", "les-gobelets.html"] };
+  function gainToast(m) {
+    if (!$("gainCss")) {
+      const st = document.createElement("style"); st.id = "gainCss";
+      st.textContent = ".gainbox{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:grid;gap:8px;width:min(420px,calc(100% - 32px))}"
+        + ".gain{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;background:linear-gradient(180deg,#3a2a0e,#241906);color:#FFE3A1;border:1px solid rgba(226,176,74,.7);border-radius:16px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.5);font:500 14px/1.35 'DM Sans',system-ui,sans-serif}"
+        + ".gain b{font-weight:700;color:#fff}.gain a{color:#FFE3A1;font-weight:700}.gain button{grid-row:1/3;grid-column:2;border:0;background:transparent;color:#FFE3A1;font-size:22px;line-height:1;cursor:pointer;padding:4px}";
+      document.head.append(st);
+    }
+    let box = $("gainBox");
+    if (!box) { box = document.createElement("div"); box.id = "gainBox"; box.className = "gainbox"; box.setAttribute("role", "status"); document.body.append(box); }
+    const [name, page] = GAME_NAMES[m.game] || [m.game, "index.html"];
+    const d = document.createElement("div"); d.className = "gain";
+    d.innerHTML = `<span>🏆 ${m.missed ? "Pendant ton absence, tu" : "Tu"} as gagné la super cagnotte <b>${esc(name)}</b> : <b>+${fmt(m.gain)} cr</b>${m.tickets > 1 ? ` (${m.tickets} tickets gagnants)` : ""} !</span>`
+      + `<span>${page === location.pathname.split("/").pop() ? "Crédits ajoutés à ton solde." : `<a href="${page}">Voir la table ${esc(name)}</a>`}</span>`
+      + `<button aria-label="Fermer">×</button>`;
+    d.querySelector("button").onclick = () => d.remove();
+    box.append(d);
   }
 
   // ---------- Confettis ----------

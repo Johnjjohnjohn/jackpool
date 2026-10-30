@@ -61,7 +61,7 @@ class Bot {
     this.balance = START;  // solde annoncé par le serveur
     this.game = pick(GAMES); this.lvl = 0;
     this.round = -1; this.results = []; this.errors = []; this.ticketsBought = 0; this.pendingTickets = 0;
-    this.drawGains = 0;
+    this.notified = []; // annonces de gains de super cagnotte reçues
   }
   connect() {
     return new Promise((ok) => {
@@ -75,7 +75,8 @@ class Bot {
     if (m.t === "balance") this.balance = m.balance;
     else if (m.t === "table" && m.round > this.round) { this.round = m.round; this.newRound(m); }
     else if (m.t === "result" && m.game === this.game && m.lvl === this.lvl) this.onResult(m);
-    else if (m.t === "bigdraw" && m.mine) this.drawNotified = (this.drawNotified || 0) + 1;
+    else if (m.t === "bigdraw" && m.mine && m.mine.gain) this.notified.push({ game: m.game, gain: m.mine.gain, live: true });
+    else if (m.t === "biggain") this.notified.push(m);
     else if (m.t === "tickets" && this.pendingTickets) { this.pendingTickets--; }
     else if (m.t === "error") {
       if (m.req === "ticket") { this.ticketsBought--; this.expected += TICKET; this.pendingTickets = Math.max(0, this.pendingTickets - 1); }
@@ -182,12 +183,16 @@ function check(bots, startedRound) {
       drawWinners.set(t.user_id, (drawWinners.get(t.user_id) || 0) + 1);
     }
   }
-  let unnotified = 0;
+  let unnotified = 0, missedOk = 0;
   for (const bot of bots) {
     const u = users.find((x) => x.name === bot.name);
     const exp = bot.expected + (drawGain.get(u.id) || 0);
     if (u.balance !== exp) fail(`${bot.name} : solde en base ${cr(u.balance)}, attendu ${cr(exp)}`);
-    if (drawWinners.has(u.id) && !bot.drawNotified) unnotified++;
+    // Chaque gain de super cagnotte doit avoir été annoncé au joueur, une seule fois, avec le bon montant
+    const gotTotal = bot.notified.reduce((a, n) => a + n.gain, 0);
+    if (drawWinners.has(u.id) && !bot.notified.length) { unnotified++; fail(`${bot.name} a gagné une super cagnotte sans être prévenu`); }
+    else if (gotTotal !== (drawGain.get(u.id) || 0)) fail(`${bot.name} : gains annoncés ${cr(gotTotal)}, gains réels ${cr(drawGain.get(u.id) || 0)}`);
+    if (bot.offline && bot.notified.some((n) => n.missed)) missedOk++;
   }
 
   // 5. Mises et tickets tous réglés
@@ -212,7 +217,7 @@ function check(bots, startedRound) {
   const after = users.reduce((a, u) => a + u.balance, 0) + jackpots.reduce((a, j) => a + j.amount, 0) + pending + feeRounds + feeTickets;
   if (before !== after) fail(`Crédits : ${cr(before)} au départ, ${cr(after)} retrouvés (écart ${cr(after - before)})`);
 
-  return { unnotified, winnersCount: drawWinners.size, stats, outcomes, rounds: rounds.length, feeRounds, feeTickets, tickets: tickets.length, draws, checkedPayouts, before, after,
+  return { missedOk, unnotified, winnersCount: drawWinners.size, stats, outcomes, rounds: rounds.length, feeRounds, feeTickets, tickets: tickets.length, draws, checkedPayouts, before, after,
     jackpots, users };
 }
 
@@ -243,10 +248,20 @@ function check(bots, startedRound) {
     bots.forEach((b) => (b.active = false));
     await sleep(ROUND_MS + 1500); // dernier tour réglé
 
+    // Quelques bots se déconnectent avant le tirage : ils devront être prévenus en revenant
+    const away = bots.slice(0, 10);
+    for (const b of away) { b.offline = true; b.ws.close(); }
+    // Les autres sont éparpillés : certains loin du jeu de leurs tickets
+    for (const b of bots.slice(10)) { b.game = pick(GAMES); b.send({ t: "sub", game: b.game, lvl: 0 }); }
+    await sleep(500);
+
     // Tirage des six super cagnottes
     console.log("\nTirage des super cagnottes…");
     for (const g of GAMES) { admin.send({ t: "drawnow", game: g }); await sleep(400); }
     await sleep(1500);
+    // Retour des absents
+    await Promise.all(away.map((b) => b.connect()));
+    await sleep(1000);
 
     const r = check(bots, startedRound);
 
@@ -265,7 +280,7 @@ function check(bots, startedRound) {
     }
     console.log("\nSuper cagnottes tirées :");
     for (const d of r.draws) console.log(`  ${NAMES[d.game]} : ${cr(d.amount)} en jeu, ${d.winners} ticket(s) gagnant(s)`);
-    if (r.unnotified) console.log(`  ⚠ ${r.unnotified} gagnant(s) sur ${r.winnersCount} n'ont reçu aucune annonce de leur gain (ils étaient sur un autre jeu au moment du tirage)`);
+    console.log(`  Gagnants prévenus : ${r.winnersCount - r.unnotified} sur ${r.winnersCount} (dont ${r.missedOk} prévenu(s) à leur retour après une absence)`);
     console.log(`\nCrédits au départ : ${cr(r.before)} | retrouvés (soldes + cagnottes + commission) : ${cr(r.after)}`);
     const errs = {}; for (const b of bots) for (const e of b.errors) errs[e] = (errs[e] || 0) + 1;
     if (Object.keys(errs).length) {

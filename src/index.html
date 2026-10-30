@@ -98,6 +98,9 @@ footer p{margin:0;max-width:60ch}
 .err{color:#FF6E5E;font-size:14px;min-height:1.2em}
 .wallet #who{color:var(--ink);font-weight:700}
 .linkbtn{border:0;background:none;color:var(--muted);font:500 13px var(--body);text-decoration:underline;cursor:pointer;padding:0}
+.gainbox{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;display:grid;gap:8px;width:min(420px,calc(100% - 32px))}
+.gain{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;background:linear-gradient(180deg,#3a2a0e,#241906);color:var(--gold-hi);border:1px solid rgba(226,176,74,.7);border-radius:16px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.5);font:500 14px/1.35 var(--body)}
+.gain b{font-weight:700;color:#fff}.gain a{color:var(--gold-hi);font-weight:700}.gain button{grid-row:1/3;grid-column:2;border:0;background:transparent;color:var(--gold-hi);font-size:22px;line-height:1;cursor:pointer;padding:4px}
 .refill{border:1px solid rgba(226,176,74,.5);background:transparent;color:var(--gold-hi);font:600 12px var(--body);padding:4px 10px;border-radius:999px;cursor:pointer}
 .games.locked .game{pointer-events:none;opacity:.55}
 </style>
@@ -231,6 +234,7 @@ function connect(){
     if(m.t==="hello"){me=m.me;jackpots=m.jackpots;nextDraw=m.nextDraw;offset=m.now-Date.now();retry=0;$("walletBox").hidden=false;$("games").classList.remove("locked")}
     if(m.t==="balance"&&me)me.balance=m.balance;
     if(m.t==="jackpots"){jackpots=m.jackpots;nextDraw=m.nextDraw}
+    if(m.t==="biggain")gainToast(m);
     render()};
   ws.onclose=()=>setTimeout(connect,Math.min(8000,1000*++retry));
 }
@@ -242,6 +246,15 @@ function render(){
     const hh=new Date(nextDraw).toLocaleTimeString("fr-FR",{hour:"numeric",timeZone:"Europe/Paris"}).replace(":00","").replace(" h","");
     $("next").textContent=`Prochains tirages à ${hh} h, dans ${h} h ${String(m).padStart(2,"0")} min`}
 }
+// Gain de super cagnotte remporté alors que le joueur était ailleurs
+const GAME_NAMES={pof:["Pile ou face","pile-ou-face.html"],de:["Dé","de-cagnotte.html"],paille:["Courte paille","courte-paille.html"],couleur:["La Couleur","la-couleur.html"],bataille:["La Bataille","la-bataille.html"],gobelets:["Les gobelets","les-gobelets.html"]};
+function gainToast(m){
+  let box=$("gainBox");
+  if(!box){box=document.createElement("div");box.id="gainBox";box.className="gainbox";box.setAttribute("role","status");document.body.append(box)}
+  const [name,page]=GAME_NAMES[m.game]||[m.game,"index.html"];
+  const d=document.createElement("div");d.className="gain";
+  d.innerHTML=`<span>🏆 ${m.missed?"Pendant ton absence, tu":"Tu"} as gagné la super cagnotte <b>${name}</b> : <b>+${fmt(m.gain)} cr</b>${m.tickets>1?` (${m.tickets} tickets gagnants)`:""} !</span><span><a href="${page}">Voir la table ${name}</a></span><button aria-label="Fermer">×</button>`;
+  d.querySelector("button").onclick=()=>d.remove();box.append(d)}
 setInterval(render,30000);
 if(token)start();else showAuth();
 render();

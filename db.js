@@ -88,6 +88,10 @@ async function init() {
     `CREATE TABLE IF NOT EXISTS draws (game TEXT NOT NULL, draw_at BIGINT NOT NULL, result TEXT NOT NULL, amount INTEGER NOT NULL,
       winners INTEGER NOT NULL, PRIMARY KEY (game, draw_at))`,
     `CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+    // Gains de super cagnotte à annoncer au joueur à sa prochaine connexion (s'il n'était pas là au tirage)
+    `CREATE TABLE IF NOT EXISTS notices (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, game TEXT NOT NULL, gain INTEGER NOT NULL,
+      tickets INTEGER NOT NULL, created BIGINT NOT NULL, seen INTEGER NOT NULL DEFAULT 0)`,
+    `CREATE INDEX IF NOT EXISTS notices_open ON notices (user_id, seen)`,
   ];
   for (const s of ddl) await query(s);
 }

@@ -241,11 +241,22 @@ async function runDraw(game, upTo) {
   if (win.length) jackpots[game] -= per * win.length;
   const mineCount = new Map();
   for (const x of tickets) if (!mineCount.has(x.user_id)) mineCount.set(x.user_id, tickets.filter((y) => y.user_id === x.user_id).length);
+  const told = new Set(); // gagnants qui ont vu le tirage en direct
   for (const c of clients) {
     if (!c.sub || !c.sub.startsWith(game + ":")) continue;
     const uid = c.user && c.user.id;
+    if (uid && gains.has(uid)) told.add(uid);
     send(c, { t: "bigdraw", game, res, amount, tickets: tickets.length, winners: win.length, per,
       mine: uid && mineCount.has(uid) ? { tickets: mineCount.get(uid), gain: gains.get(uid) || 0 } : null });
+  }
+  // Les gagnants qui étaient ailleurs sont prévenus aussi : tout de suite s'ils sont connectés,
+  // sinon à leur prochaine connexion.
+  for (const [uid, gain] of gains) {
+    if (told.has(uid)) continue;
+    const notice = { t: "biggain", game, gain, tickets: win.filter((x) => x.user_id === uid).length };
+    if ([...clients].some((c) => c.user && c.user.id === uid)) toUser(uid, notice);
+    else await db.query("INSERT INTO notices (id,user_id,game,gain,tickets,created) VALUES ($1,$2,$3,$4,$5,$6)",
+      [newId(), uid, game, gain, notice.tickets, Date.now()]).catch((e) => console.error("Annonce non enregistrée :", e));
   }
   for (const uid of gains.keys()) await pushBalance(uid);
   await pushTickets(game);
@@ -389,6 +400,13 @@ wss.on("connection", async (ws, req) => {
       send(ws, { t: "error", message: e.message || "Erreur", req: m.t });
     }
   });
+  // Gains de super cagnotte remportés pendant son absence
+  try {
+    // Marquées « vues » et lues en une seule fois : deux onglets ouverts ensemble ne reçoivent pas l'annonce en double.
+    const pending = await db.query("UPDATE notices SET seen=1 WHERE user_id=$1 AND seen=0 RETURNING game, gain, tickets, created", [user.id]);
+    pending.sort((a, b) => a.created - b.created);
+    for (const n of pending) send(ws, { t: "biggain", game: n.game, gain: n.gain, tickets: n.tickets, missed: true });
+  } catch (e) { console.error("Annonces en attente :", e); }
 });
 // Vérifie régulièrement que les connexions sont vivantes.
 setInterval(() => {

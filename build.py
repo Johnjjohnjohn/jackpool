@@ -84,6 +84,7 @@ BODY = """
       <div class="card pg">
         <div class="qhead"><h2>Quêtes du jour</h2><span class="muted" id="pgReset"></span></div>
         <ul id="pgQuests"></ul>
+        <a class="pglink" href="index.html#collection">🎁 Ma collection</a>
       </div>
       <div class="card">
         <h2>Joueurs de ce tour</h2>

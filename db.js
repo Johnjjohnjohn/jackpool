@@ -107,6 +107,7 @@ async function init() {
   const more = [
     `CREATE TABLE IF NOT EXISTS quest_progress (user_id TEXT NOT NULL, day TEXT NOT NULL, qid TEXT NOT NULL,
       progress INTEGER NOT NULL, extra TEXT NOT NULL DEFAULT '', done INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (user_id, day, qid))`,
+    `CREATE TABLE IF NOT EXISTS equipped (user_id TEXT NOT NULL, cat TEXT NOT NULL, item TEXT NOT NULL, PRIMARY KEY (user_id, cat))`,
     `CREATE TABLE IF NOT EXISTS user_skins (user_id TEXT NOT NULL, skin TEXT NOT NULL, created BIGINT NOT NULL, PRIMARY KEY (user_id, skin))`,
     // Crédits offerts par les quêtes et les passages de niveau (pour pouvoir tout recompter)
     `CREATE TABLE IF NOT EXISTS rewards (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL, amount INTEGER NOT NULL, created BIGINT NOT NULL)`,

@@ -31,17 +31,42 @@ function dailyQuests(uid, day) {
   return GROUPS.map((list, i) => list[h[i] % list.length]);
 }
 
-// ---------- Collection de dés ----------
-// Chaque dé se débloque soit en jouant (niveau ou quêtes terminées), soit en l'achetant avec des crédits.
-// Le Diamant ne s'achète pas : il se mérite uniquement avec les quêtes.
+// ---------- Collection : dés, pièces, cartes, gobelets, pailles ----------
+// Chaque objet se débloque soit en jouant (niveau ou quêtes terminées), soit en l'achetant avec des crédits.
+// Le dernier de chaque famille ne s'achète pas : il se mérite uniquement avec les quêtes.
+// price 0 = offert à tous ; price null = pas à vendre.
+const CATS = {
+  de: "Dés", piece: "Pièces", cartes: "Dos de cartes", gobelets: "Gobelets", pailles: "Pailles",
+};
 const SKINS = [
-  { id: "ivoire", name: "Ivoire", price: 0 },
-  { id: "ebene", name: "Ébène", price: 5000, level: 3 },
-  { id: "rubis", name: "Rubis", price: 15000, level: 5 },
-  { id: "emeraude", name: "Émeraude", price: 15000, quests: 5 },
-  { id: "or", name: "Or", price: 50000, level: 10 },
-  { id: "diamant", name: "Diamant", price: null, quests: 25 },
+  { cat: "de", id: "ivoire", name: "Ivoire", price: 0 },
+  { cat: "de", id: "ebene", name: "Ébène", price: 5000, level: 3 },
+  { cat: "de", id: "rubis", name: "Rubis", price: 15000, level: 5 },
+  { cat: "de", id: "emeraude", name: "Émeraude", price: 15000, quests: 5 },
+  { cat: "de", id: "or", name: "Or", price: 50000, level: 10 },
+  { cat: "de", id: "diamant", name: "Diamant", price: null, quests: 25 },
+  { cat: "piece", id: "p_or", name: "Or", price: 0 },
+  { cat: "piece", id: "p_argent", name: "Argent", price: 8000, level: 4 },
+  { cat: "piece", id: "p_cuivre", name: "Cuivre", price: 8000, quests: 3 },
+  { cat: "piece", id: "p_platine", name: "Platine", price: 30000, level: 8 },
+  { cat: "piece", id: "p_obsidienne", name: "Obsidienne", price: null, quests: 15 },
+  { cat: "cartes", id: "c_bleu", name: "Bleu royal", price: 0 },
+  { cat: "cartes", id: "c_bordeaux", name: "Bordeaux", price: 5000, level: 3 },
+  { cat: "cartes", id: "c_vert", name: "Vert anglais", price: 8000, quests: 4 },
+  { cat: "cartes", id: "c_noir", name: "Noir et or", price: 50000, level: 12 },
+  { cat: "cartes", id: "c_nacre", name: "Nacre", price: null, quests: 20 },
+  { cat: "gobelets", id: "g_etain", name: "Étain", price: 0 },
+  { cat: "gobelets", id: "g_cuivre", name: "Cuivre", price: 8000, level: 4 },
+  { cat: "gobelets", id: "g_bois", name: "Bois verni", price: 10000, quests: 6 },
+  { cat: "gobelets", id: "g_or", name: "Or", price: 50000, level: 10 },
+  { cat: "gobelets", id: "g_cristal", name: "Cristal", price: null, quests: 30 },
+  { cat: "pailles", id: "s_doree", name: "Dorée", price: 0 },
+  { cat: "pailles", id: "s_rayee", name: "Rayée rouge", price: 3000, level: 2 },
+  { cat: "pailles", id: "s_menthe", name: "Menthe", price: 5000, quests: 3 },
+  { cat: "pailles", id: "s_neon", name: "Néon", price: 20000, level: 7 },
+  { cat: "pailles", id: "s_arc", name: "Arc-en-ciel", price: null, quests: 12 },
 ];
+const DEFAULT = Object.fromEntries(Object.keys(CATS).map((c) => [c, SKINS.find((s) => s.cat === c && s.price === 0).id]));
 const SKIN = Object.fromEntries(SKINS.map((s) => [s.id, s]));
 const earned = (s, L, done) => s.price === 0 || (s.level && L >= s.level) || (s.quests && done >= s.quests);
 
@@ -85,7 +110,7 @@ function create({ db, parisDay, nextParisMidnight, addFee }) {
     }
     // Dés débloqués en jouant
     const Lb = levelOf(before), La = levelOf(xp);
-    for (const s of SKINS) if (s.price !== 0 && !earned(s, Lb, u.quests_done) && earned(s, La, done)) events.push({ t: "skin", id: s.id, name: s.name });
+    for (const s of SKINS) if (s.price !== 0 && !earned(s, Lb, u.quests_done) && earned(s, La, done)) events.push({ t: "skin", id: s.id, name: s.name, cat: s.cat });
     for (const id of touched) {
       const r = rows[id];
       await q.query(`INSERT INTO quest_progress (user_id,day,qid,progress,extra,done) VALUES ($1,$2,$3,$4,$5,$6)
@@ -107,41 +132,52 @@ function create({ db, parisDay, nextParisMidnight, addFee }) {
     for (const r of await db.query("SELECT qid, progress, done FROM quest_progress WHERE user_id=$1 AND day=$2", [uid, day])) rows[r.qid] = r;
     const bought = new Set((await db.query("SELECT skin FROM user_skins WHERE user_id=$1", [uid])).map((r) => r.skin));
     const L = levelOf(u.xp);
+    const owns = (s) => bought.has(s.id) || earned(s, L, u.quests_done);
+    // Objets équipés (le dé est aussi gardé dans users.die_skin, pour les comptes d'avant)
+    const equipped = { ...DEFAULT };
+    if (SKIN[u.die_skin] && SKIN[u.die_skin].cat === "de") equipped.de = u.die_skin;
+    for (const r of await db.query("SELECT cat, item FROM equipped WHERE user_id=$1", [uid])) if (SKIN[r.item] && SKIN[r.item].cat === r.cat) equipped[r.cat] = r.item;
+    for (const c in equipped) if (!owns(SKIN[equipped[c]])) equipped[c] = DEFAULT[c];
     return {
       t: "prog", xp: u.xp, level: L, title: titleOf(L), cur: xpFor(L), next: xpFor(L + 1), nextReward: levelReward(L + 1),
       questsDone: u.quests_done, resetAt: nextParisMidnight(),
       quests: dailyQuests(uid, day).map((Q) => ({ id: Q.id, text: Q.text, target: Q.target, reward: Q.reward,
         progress: rows[Q.id] ? rows[Q.id].progress : 0, done: !!(rows[Q.id] && rows[Q.id].done) })),
-      skin: SKIN[u.die_skin] ? u.die_skin : "ivoire",
-      skins: SKINS.map((s) => ({ id: s.id, name: s.name, price: s.price, level: s.level || 0, quests: s.quests || 0,
-        owned: bought.has(s.id) || earned(s, L, u.quests_done) })),
+      skin: equipped.de, equipped, cats: CATS,
+      skins: SKINS.map((s) => ({ cat: s.cat, id: s.id, name: s.name, price: s.price, level: s.level || 0, quests: s.quests || 0, owned: owns(s) })),
     };
   }
 
   async function buySkin(uid, id) {
     const s = SKIN[id];
-    if (!s) throw new Error("Ce dé n'existe pas.");
-    if (s.price === null) throw new Error(`Le dé ${s.name} ne s'achète pas : il se gagne en terminant ${s.quests} quêtes.`);
+    if (!s) throw new Error("Cet objet n'existe pas.");
+    if (s.price === null) throw new Error(`${s.name} ne s'achète pas : il se gagne en terminant ${s.quests} quêtes.`);
     await db.tx(async (q) => {
       const u = (await q.query("SELECT xp, quests_done FROM users WHERE id=$1", [uid]))[0];
       const has = (await q.query("SELECT skin FROM user_skins WHERE user_id=$1 AND skin=$2", [uid, id])).length;
-      if (has || earned(s, levelOf(u.xp), u.quests_done)) throw new Error("Tu as déjà ce dé.");
-      const r = await q.query("UPDATE users SET balance=balance-$1, die_skin=$3 WHERE id=$2 AND balance>=$1 RETURNING balance", [s.price, uid, id]);
-      if (!r.length) throw new Error("Solde insuffisant pour ce dé.");
+      if (has || earned(s, levelOf(u.xp), u.quests_done)) throw new Error("Tu l'as déjà dans ta collection.");
+      const r = await q.query("UPDATE users SET balance=balance-$1 WHERE id=$2 AND balance>=$1 RETURNING balance", [s.price, uid]);
+      if (!r.length) throw new Error("Solde insuffisant pour cet achat.");
       await q.query("INSERT INTO user_skins (user_id,skin,created) VALUES ($1,$2,$3)", [uid, id, Date.now()]);
+      await setEquip(q, uid, s);
       await addFee(q, "boutique", "boutique", s.price, s.price);
     });
+  }
+
+  async function setEquip(q, uid, s) {
+    await q.query("INSERT INTO equipped (user_id,cat,item) VALUES ($1,$2,$3) ON CONFLICT (user_id,cat) DO UPDATE SET item=EXCLUDED.item", [uid, s.cat, s.id]);
+    if (s.cat === "de") await q.query("UPDATE users SET die_skin=$1 WHERE id=$2", [s.id, uid]);
   }
 
   async function equip(uid, id) {
     const st = await state(uid);
     const s = st && st.skins.find((x) => x.id === id);
-    if (!s) throw new Error("Ce dé n'existe pas.");
-    if (!s.owned) throw new Error("Débloque ou achète ce dé d'abord.");
-    await db.query("UPDATE users SET die_skin=$1 WHERE id=$2", [id, uid]);
+    if (!s) throw new Error("Cet objet n'existe pas.");
+    if (!s.owned) throw new Error("Débloque-le ou achète-le d'abord.");
+    await setEquip(db, uid, SKIN[id]);
   }
 
   return { apply, state, buySkin, equip };
 }
 
-module.exports = { create, XP_PLAY, XP_TICKET, XP_QUEST, xpFor, levelOf, levelReward, QUESTS, SKINS, dailyQuests };
+module.exports = { CATS, create, XP_PLAY, XP_TICKET, XP_QUEST, xpFor, levelOf, levelReward, QUESTS, SKINS, dailyQuests };

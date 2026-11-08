@@ -21,7 +21,7 @@ Réglés dans `progress.js`. Les bots n'y participent pas.
 
 - **Expérience** : +10 XP par partie jouée (quelle que soit la mise), +5 XP par ticket de super cagnotte, +50 XP par quête terminée. Chaque niveau rapporte 10 cr, et 50 cr tous les 5 niveaux. Titres : Débutant, Amateur (niv. 3), Habitué (5), Confirmé (10), Expert (15), Maître (20), Légende (30).
 - **Quêtes du jour** : 3 par joueur et par jour (une générale, une sur un jeu précis, une « défi »), renouvelées à minuit (heure de Paris). Récompenses de 3 à 10 cr.
-- **Dés** : Ivoire (offert), Ébène (niveau 3 ou 50 cr), Rubis (niveau 5 ou 150 cr), Émeraude (5 quêtes ou 150 cr), Or (niveau 10 ou 500 cr), Diamant (25 quêtes, ne s'achète pas). Le dé choisi roule à la table du Dé. Les achats apparaissent sur la page Banque (« boutique »).
+- **Collection** (5 familles, chacune utilisée à sa table) : dés (Dé), pièces (Pile ou face), dos de cartes (Couleur et Bataille), gobelets (Gobelets) et pailles (Courte paille). Dans chaque famille, un objet est offert, trois se débloquent par le niveau ou les quêtes ou s'achètent avec des crédits, et le dernier (Diamant, Obsidienne, Nacre, Cristal, Arc-en-ciel) ne se gagne qu'avec les quêtes. Le catalogue complet est dans `progress.js`. Les achats apparaissent sur la page Banque (« boutique »).
 
 ## Tester les comptes avec des bots
 

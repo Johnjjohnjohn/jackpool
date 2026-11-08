@@ -9,6 +9,7 @@ const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
 const db = require("./db");
 const { startBots } = require("./bots");
+const progress = require("./progress");
 
 // ---------- Réglages ----------
 const PORT = process.env.PORT || 3000;
@@ -58,6 +59,10 @@ function nextDrawAfter(t) {
 }
 
 const parisDay = (ms = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(ms)); // « 2026-10-30 »
+function nextParisMidnight(t = Date.now()) {
+  const local = new Date(t + tzOffset(t));
+  return parisToUtc(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() + 1, 0);
+}
 
 // ---------- Banque : commission encaissée ----------
 const bankHistory = []; // commission de chaque tour (dernière heure), en mémoire
@@ -82,6 +87,7 @@ async function bankMsg() {
     t: "bank", now: Date.now(), roundMs: ROUND_MS,
     today: sum((r) => r.day === today), total: sum(() => true),
     parties: sum((r) => r.day === today && r.src === "parties"), tickets: sum((r) => r.day === today && r.src === "tickets"),
+    boutique: sum((r) => r.day === today && r.src === "boutique"),
     games, days: Object.entries(days).sort().slice(-14), history: bankHistory, jackpots, public: bankPublic, since: rows.length ? Object.keys(days).sort()[0] : today,
   };
 }
@@ -90,6 +96,14 @@ async function pushBank() {
   if (!admins.length) return;
   const m = await bankMsg();
   for (const c of admins) send(c, m);
+}
+
+// ---------- Niveaux, quêtes et dés ----------
+const prog = progress.create({ db, parisDay, nextParisMidnight, addFee });
+async function pushProg(uid, events = []) {
+  if (![...clients].some((c) => c.user && c.user.id === uid)) return;
+  const st = await prog.state(uid);
+  if (st) toUser(uid, { ...st, events });
 }
 
 // ---------- Comptes ----------
@@ -211,6 +225,7 @@ async function settleRound(round) {
   for (const key in tables) {
     const [game, lvlS] = key.split(":"), lvl = Number(lvlS), t = tables[key];
     const res = GAMES[game].draw();
+    const progOut = new Map();
     // Lecture des mises et paiements dans une seule transaction : aucune mise ne peut se glisser entre les deux.
     const { bets, winners, outcome, share, toJackpot, pot, gains } = await db.tx(async (q) => {
       const bets = await q.query("SELECT b.user_id, b.choice, b.stake, u.is_bot FROM bets b JOIN users u ON u.id=b.user_id WHERE b.game=$1 AND b.lvl=$2 AND b.round=$3 AND b.settled=0", [game, lvl, round]);
@@ -223,6 +238,11 @@ async function settleRound(round) {
       else if (winners.length === bets.length) { outcome = "allwin"; for (const b of bets) gains.set(b.user_id, b.stake); }
       else { outcome = "split"; share = Math.floor((pot * (1 - FEE)) / winners.length); for (const b of winners) gains.set(b.user_id, share); }
       for (const [uid, g] of gains) await q.query("UPDATE users SET balance=balance+$1 WHERE id=$2", [g, uid]);
+      // Expérience et quêtes des vrais joueurs (une vraie victoire = gagner une part de la cagnotte)
+      for (const b of bets) if (!b.is_bot) {
+        const r = await prog.apply(q, b.user_id, [{ k: "play", game, win: outcome === "split" && gains.has(b.user_id) }]);
+        if (r) progOut.set(b.user_id, r.events);
+      }
       if (toJackpot) await q.query("UPDATE jackpots SET amount=amount+$1 WHERE game=$2", [toJackpot, game]);
       // Commission de la banque : ce qui n'est ni redistribué ni versé à la super cagnotte
       const fee = pot - toJackpot - [...gains.values()].reduce((a, g) => a + g, 0);
@@ -245,6 +265,7 @@ async function settleRound(round) {
     });
     t.bets.clear();
     for (const uid of myBets.keys()) await pushBalance(uid);
+    for (const [uid, events] of progOut) await pushProg(uid, events).catch((e) => console.error("Progression :", e));
   }
   bankHistory.push({ round, at: (round + 1) * ROUND_MS, amount: feesThisRound });
   feesThisRound = 0;
@@ -258,13 +279,16 @@ async function buyTicket(c, { game, choice }) {
   const G = GAMES[game];
   if (!G || !G.out.includes(choice)) throw new Error("Choix invalide.");
   const add = Math.round(TICKET * (1 - FEE));
+  let events = [];
   await db.tx(async (q) => {
     const r = await q.query("UPDATE users SET balance=balance-$1 WHERE id=$2 AND balance>=$1 RETURNING balance", [TICKET, c.user.id]);
     if (!r.length) throw new Error("Solde insuffisant pour un ticket.");
     await q.query("INSERT INTO tickets (id,game,user_id,choice,draw_at) VALUES ($1,$2,$3,$4,$5)", [newId(), game, c.user.id, choice, nextDraw]);
     await q.query("UPDATE jackpots SET amount=amount+$1 WHERE game=$2", [add, game]);
     await addFee(q, game, "tickets", TICKET - add, c.user.bot ? 0 : TICKET - add);
+    if (!c.user.bot) { const r = await prog.apply(q, c.user.id, [{ k: "ticket", game }]); if (r) events = r.events; }
   });
+  if (!c.user.bot) await pushProg(c.user.id, events);
   jackpots[game] += add;
   feesThisRound += TICKET - add;
   await pushBalance(c.user.id);
@@ -425,7 +449,7 @@ wss.on("connection", async (ws, req) => {
   ws.on("pong", () => (ws.alive = true));
   clients.add(ws);
   send(ws, { t: "hello", me: { name: user.name, balance: user.balance, admin: !!user.is_admin }, stakes: STAKES, ticket: TICKET, fee: FEE,
-    roundMs: ROUND_MS, now: Date.now(), jackpots, nextDraw, bankPublic });
+    roundMs: ROUND_MS, now: Date.now(), jackpots, nextDraw, bankPublic, prog: await prog.state(user.id).catch(() => null) });
   ws.on("close", () => clients.delete(ws));
   ws.on("message", async (raw) => {
     let m;
@@ -458,7 +482,16 @@ wss.on("connection", async (ws, req) => {
         await db.query("INSERT INTO meta (key,value) VALUES ('bankPublic',$1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value", [bankPublic ? "1" : "0"]);
         toAll({ t: "bankvis", on: bankPublic });
         await pushBank();
-      } else if (m.t === "ping") send(ws, { t: "pong", now: Date.now() });
+      } else if (m.t === "buyskin") {
+        await prog.buySkin(ws.user.id, String(m.id));
+        await pushBalance(ws.user.id);
+        await pushProg(ws.user.id, [{ t: "bought", id: String(m.id) }]);
+        await pushBank();
+      } else if (m.t === "equip") {
+        await prog.equip(ws.user.id, String(m.id));
+        await pushProg(ws.user.id);
+      } else if (m.t === "prog") send(ws, await prog.state(ws.user.id));
+      else if (m.t === "ping") send(ws, { t: "pong", now: Date.now() });
     } catch (e) {
       send(ws, { t: "error", message: e.message || "Erreur", req: m.t });
     }

@@ -15,9 +15,17 @@ Version de test de Jackpool : six jeux de hasard en cagnotte commune, joués ave
 - `PORT` : fourni automatiquement par l'hébergeur.
 - `BOTS_PER_TABLE` : nombre de bots qui jouent à chaque table (par exemple `10`, maximum 20). Sans cette variable, aucun bot ne joue. Les bots portent un prénom en B suivi de « btz » et d'un numéro (ex. « Bruno btz1 »), un badge 🤖 les signale aux joueurs, et ils jouent uniquement avec des crédits virtuels. Ce pseudo est réservé : un vrai joueur ne peut pas le prendre. **À laisser éteint pour toute version avec argent réel.**
 
+## Niveaux, quêtes et collection de dés
+
+Réglés dans `progress.js`. Les bots n'y participent pas.
+
+- **Expérience** : +10 XP par partie jouée (quelle que soit la mise), +5 XP par ticket de super cagnotte, +50 XP par quête terminée. Chaque niveau rapporte 10 cr, et 50 cr tous les 5 niveaux. Titres : Débutant, Amateur (niv. 3), Habitué (5), Confirmé (10), Expert (15), Maître (20), Légende (30).
+- **Quêtes du jour** : 3 par joueur et par jour (une générale, une sur un jeu précis, une « défi »), renouvelées à minuit (heure de Paris). Récompenses de 3 à 10 cr.
+- **Dés** : Ivoire (offert), Ébène (niveau 3 ou 50 cr), Rubis (niveau 5 ou 150 cr), Émeraude (5 quêtes ou 150 cr), Or (niveau 10 ou 500 cr), Diamant (25 quêtes, ne s'achète pas). Le dé choisi roule à la table du Dé. Les achats apparaissent sur la page Banque (« boutique »).
+
 ## Tester les comptes avec des bots
 
-`node test/bots.js` lance une copie privée du site sur une base jetable, y fait jouer 60 bots, tire les super cagnottes et vérifie que chaque crédit est compté.
+`node test/bots.js` lance une copie privée du site sur une base jetable, y fait jouer 60 bots, tire les super cagnottes et vérifie que chaque crédit est compté, ainsi que l'expérience, les quêtes et les récompenses de niveau.
 
 ## Règles importantes
 

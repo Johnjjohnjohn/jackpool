@@ -121,7 +121,11 @@ function check(bots, startedRound) {
   const db = new DatabaseSync(DBFILE);
   const all = (s, ...p) => db.prepare(s).all(...p).map((r) => ({ ...r }));
 
-  const users = all("SELECT id, name, balance FROM users");
+  const users = all("SELECT id, name, balance, xp, quests_done FROM users");
+  const rewardRows = all("SELECT user_id, kind, amount FROM rewards");
+  const rewardOf = new Map();
+  for (const r of rewardRows) rewardOf.set(r.user_id, (rewardOf.get(r.user_id) || 0) + r.amount);
+  const rewardsTotal = rewardRows.reduce((a, r) => a + r.amount, 0);
   const jackpots = all("SELECT game, amount FROM jackpots");
   const rounds = all("SELECT * FROM rounds ORDER BY round");
   const bets = all("SELECT * FROM bets");
@@ -186,13 +190,34 @@ function check(bots, startedRound) {
   let unnotified = 0, missedOk = 0;
   for (const bot of bots) {
     const u = users.find((x) => x.name === bot.name);
-    const exp = bot.expected + (drawGain.get(u.id) || 0);
+    const exp = bot.expected + (drawGain.get(u.id) || 0) + (rewardOf.get(u.id) || 0);
     if (u.balance !== exp) fail(`${bot.name} : solde en base ${cr(u.balance)}, attendu ${cr(exp)}`);
     // Chaque gain de super cagnotte doit avoir été annoncé au joueur, une seule fois, avec le bon montant
     const gotTotal = bot.notified.reduce((a, n) => a + n.gain, 0);
     if (drawWinners.has(u.id) && !bot.notified.length) { unnotified++; fail(`${bot.name} a gagné une super cagnotte sans être prévenu`); }
     else if (gotTotal !== (drawGain.get(u.id) || 0)) fail(`${bot.name} : gains annoncés ${cr(gotTotal)}, gains réels ${cr(drawGain.get(u.id) || 0)}`);
     if (bot.offline && bot.notified.some((n) => n.missed)) missedOk++;
+  }
+
+  // 4 bis. Niveaux et quêtes : expérience recalculée, récompenses cohérentes
+  const { XP_PLAY, XP_TICKET, XP_QUEST, levelOf, levelReward, QUESTS } = require("../progress");
+  const roundKeys = new Set(rounds.map((r) => r.game + ":" + r.lvl + ":" + r.round));
+  let questsTotal = 0, levelsTotal = 0, maxLevel = 1;
+  for (const u of users) {
+    const played = bets.filter((b) => b.user_id === u.id && b.settled && roundKeys.has(b.game + ":" + b.lvl + ":" + b.round)).length;
+    const tk = tickets.filter((t) => t.user_id === u.id).length;
+    const xp = played * XP_PLAY + tk * XP_TICKET + u.quests_done * XP_QUEST;
+    if (u.xp !== xp) fail(`${u.name} : ${u.xp} XP en base, ${xp} XP recalculés`);
+    const mine = rewardRows.filter((r) => r.user_id === u.id);
+    const q = mine.filter((r) => r.kind.startsWith("quête "));
+    if (q.length !== u.quests_done) fail(`${u.name} : ${u.quests_done} quêtes terminées, ${q.length} récompenses de quête`);
+    if (u.quests_done > 3) fail(`${u.name} : ${u.quests_done} quêtes en une journée (3 maximum)`);
+    for (const r of q) if (QUESTS[r.kind.slice(6)].reward !== r.amount) fail(`${u.name} : mauvaise récompense pour ${r.kind}`);
+    const lv = mine.filter((r) => r.kind.startsWith("niveau "));
+    const L = levelOf(u.xp);
+    if (lv.length !== L - 1) fail(`${u.name} : niveau ${L} mais ${lv.length} récompense(s) de niveau`);
+    for (const r of lv) if (levelReward(Number(r.kind.slice(7))) !== r.amount) fail(`${u.name} : mauvaise récompense pour ${r.kind}`);
+    questsTotal += u.quests_done; levelsTotal += lv.length; maxLevel = Math.max(maxLevel, L);
   }
 
   // 5. Mises et tickets tous réglés
@@ -217,13 +242,13 @@ function check(bots, startedRound) {
   // 7. Aucun crédit créé ni perdu
   const feeTickets = tickets.length * (TICKET - Math.round(TICKET * 0.95));
   const pending = bets.filter((b) => !b.settled).reduce((a, b) => a + b.stake, 0);
-  const before = users.length * START + Object.values(START_JACKPOT).reduce((a, b) => a + b, 0);
+  const before = users.length * START + Object.values(START_JACKPOT).reduce((a, b) => a + b, 0) + rewardsTotal;
   const after = users.reduce((a, u) => a + u.balance, 0) + jackpots.reduce((a, j) => a + j.amount, 0) + pending + feeRounds + feeTickets;
   if (fp !== feeRounds) fail(`Banque : ${cr(fp)} enregistrés sur les parties, ${cr(feeRounds)} recalculés`);
   if (ft !== feeTickets) fail(`Banque : ${cr(ft)} enregistrés sur les tickets, ${cr(feeTickets)} recalculés`);
   if (before !== after) fail(`Crédits : ${cr(before)} au départ, ${cr(after)} retrouvés (écart ${cr(after - before)})`);
 
-  return { missedOk, unnotified, winnersCount: drawWinners.size, stats, outcomes, rounds: rounds.length, feeRounds, feeTickets, tickets: tickets.length, draws, checkedPayouts, before, after,
+  return { questsTotal, levelsTotal, maxLevel, rewardsTotal, missedOk, unnotified, winnersCount: drawWinners.size, stats, outcomes, rounds: rounds.length, feeRounds, feeTickets, tickets: tickets.length, draws, checkedPayouts, before, after,
     jackpots, users };
 }
 
@@ -277,6 +302,7 @@ function check(bots, startedRound) {
     console.log(`  partagées entre gagnants : ${r.outcomes.split}, tout le monde gagne : ${r.outcomes.allwin}, personne ne gagne : ${r.outcomes.nobody}, égalités (Bataille) : ${r.outcomes.tie}`);
     console.log(`Gains vérifiés un par un : ${r.checkedPayouts}`);
     console.log(`Tickets de super cagnotte : ${r.tickets}`);
+    console.log(`Progression : ${r.questsTotal} quêtes terminées, ${r.levelsTotal} passages de niveau (niveau max ${r.maxLevel}), ${cr(r.rewardsTotal)} de récompenses`);
     console.log(`Commission encaissée : ${cr(r.feeRounds)} sur les parties + ${cr(r.feeTickets)} sur les tickets (identique à la page Banque)`);
     console.log("\nPar jeu :");
     for (const g of GAMES) {
@@ -287,7 +313,7 @@ function check(bots, startedRound) {
     console.log("\nSuper cagnottes tirées :");
     for (const d of r.draws) console.log(`  ${NAMES[d.game]} : ${cr(d.amount)} en jeu, ${d.winners} ticket(s) gagnant(s)`);
     console.log(`  Gagnants prévenus : ${r.winnersCount - r.unnotified} sur ${r.winnersCount} (dont ${r.missedOk} prévenu(s) à leur retour après une absence)`);
-    console.log(`\nCrédits au départ : ${cr(r.before)} | retrouvés (soldes + cagnottes + commission) : ${cr(r.after)}`);
+    console.log(`\nCrédits au départ (+ récompenses) : ${cr(r.before)} | retrouvés (soldes + cagnottes + commission) : ${cr(r.after)}`);
     const errs = {}; for (const b of bots) for (const e of b.errors) errs[e] = (errs[e] || 0) + 1;
     if (Object.keys(errs).length) {
       console.log("\nMessages d'erreur reçus par les bots (normaux s'ils jouent trop tard ou sans assez de crédits) :");

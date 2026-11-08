@@ -222,7 +222,7 @@ li.n{color:var(--gold-hi);border-color:rgba(226,176,74,.35)}
       <div class="logo">&#x2665;&#xFE0E;</div>
       <div><h1>La <span class="o">Couleur</span></h1><div class="tag">Jackpool · crédits virtuels</div></div>
     </div>
-    <div class="wallet"><span id="who">…</span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button></div>
+    <div class="wallet"><a class="lvlchip" id="lvlChip" href="index.html#progression" hidden></a><span id="who">…</span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button></div>
   </header>
 
   <div class="grid">
@@ -264,6 +264,10 @@ li.n{color:var(--gold-hi);border-color:rgba(226,176,74,.35)}
         <div class="row"><span>Tes tickets : <b id="tkMine">0</b></span><span>Total : <b id="tkAll">0</b></span></div>
         <div class="note" id="jpMsg"></div>
         <button class="ghost" id="drawNow" hidden>Tirer la super cagnotte maintenant (administrateur)</button>
+      </div>
+      <div class="card pg">
+        <div class="qhead"><h2>Quêtes du jour</h2><span class="muted" id="pgReset"></span></div>
+        <ul id="pgQuests"></ul>
       </div>
       <div class="card">
         <h2>Joueurs de ce tour</h2>
@@ -310,5 +314,6 @@ const G={key:"couleur",felt:"vert",OUT:["H","D","C","S"],bigMs:2600,
     setTimeout(()=>c.classList.add("up"),big?1100:650);setTimeout(()=>c.classList.add("win"),big?1900:1450);return big?2000:1500},
   head:r=>`${r.c.r} de ${SUITS[r.c.s].name.toLowerCase()} !`};
 </script>
+<script src="prog.js"></script>
 <script src="client.js"></script>
 </body></html>

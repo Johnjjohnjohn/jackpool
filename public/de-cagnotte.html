@@ -244,7 +244,7 @@ li.n{color:var(--gold-hi);border-color:rgba(226,176,74,.35)}
       <div class="logo">6</div>
       <div><h1>Le <span class="o">Dé</span></h1><div class="tag">Jackpool · crédits virtuels</div></div>
     </div>
-    <div class="wallet"><span id="who">…</span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button></div>
+    <div class="wallet"><a class="lvlchip" id="lvlChip" href="index.html#progression" hidden></a><span id="who">…</span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button></div>
   </header>
 
   <div class="grid">
@@ -286,6 +286,10 @@ li.n{color:var(--gold-hi);border-color:rgba(226,176,74,.35)}
         <div class="row"><span>Tes tickets : <b id="tkMine">0</b></span><span>Total : <b id="tkAll">0</b></span></div>
         <div class="note" id="jpMsg"></div>
         <button class="ghost" id="drawNow" hidden>Tirer la super cagnotte maintenant (administrateur)</button>
+      </div>
+      <div class="card pg">
+        <div class="qhead"><h2>Quêtes du jour</h2><span class="muted" id="pgReset"></span></div>
+        <ul id="pgQuests"></ul>
       </div>
       <div class="card">
         <h2>Joueurs de ce tour</h2>
@@ -332,5 +336,6 @@ const G={key:"de",felt:"bleu",OUT:["1","2","3","4","5","6"],bigMs:4300,
     $(p+"Die").style.transform=`rotateX(${s.x}deg) rotateY(${s.y}deg)`;return big?4000:2600},
   head:r=>`${r.win} !`};
 </script>
+<script src="prog.js"></script>
 <script src="client.js"></script>
 </body></html>

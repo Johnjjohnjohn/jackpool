@@ -84,6 +84,7 @@ td.t{font-weight:700;color:var(--gold-hi)}
       <div class="card tile"><div class="label">Depuis le début</div><div class="v"><span id="total">0,00</span> cr</div><div class="s" id="since"></div></div>
       <div class="card tile"><div class="label">Aujourd'hui, sur les parties</div><div class="v"><span id="parties">0,00</span> cr</div><div class="s">5 % des cagnottes</div></div>
       <div class="card tile"><div class="label">Aujourd'hui, sur les tickets</div><div class="v"><span id="tickets">0,00</span> cr</div><div class="s">5 % des tickets de super cagnotte</div></div>
+      <div class="card tile"><div class="label">Aujourd'hui, boutique de dés</div><div class="v"><span id="boutique">0,00</span> cr</div><div class="s">Dés achetés avec des crédits</div></div>
       <div class="card tile"><div class="label">Super cagnottes en jeu</div><div class="v"><span id="jp">0,00</span> cr</div><div class="s">Appartiennent aux joueurs, pas à la banque</div></div>
     </div>
 
@@ -154,6 +155,7 @@ function render(m) {
   $("since").textContent = `depuis le ${new Date(m.since + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })} · dont joueurs ${fmt(m.total.human)} cr`;
   $("parties").textContent = fmt(m.parties.amount);
   $("tickets").textContent = fmt(m.tickets.amount);
+  $("boutique").textContent = fmt((m.boutique || { amount: 0 }).amount);
   $("jp").textContent = fmt(Object.values(m.jackpots).reduce((a, b) => a + b, 0));
 
   // Dernière heure

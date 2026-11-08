@@ -38,7 +38,7 @@ BODY = """
       <div class="logo">{logo}</div>
       <div><h1>{h1}</h1><div class="tag">Jackpool · crédits virtuels</div></div>
     </div>
-    <div class="wallet"><span id="who">…</span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button></div>
+    <div class="wallet"><a class="lvlchip" id="lvlChip" href="index.html#progression" hidden></a><span id="who">…</span> <span class="chip"><span id="bal">0,00</span> cr</span><button class="refill" id="refill" hidden>Recharger</button></div>
   </header>
 
   <div class="grid">
@@ -80,6 +80,10 @@ BODY = """
         <div class="row"><span>Tes tickets : <b id="tkMine">0</b></span><span>Total : <b id="tkAll">0</b></span></div>
         <div class="note" id="jpMsg"></div>
         <button class="ghost" id="drawNow" hidden>Tirer la super cagnotte maintenant (administrateur)</button>
+      </div>
+      <div class="card pg">
+        <div class="qhead"><h2>Quêtes du jour</h2><span class="muted" id="pgReset"></span></div>
+        <ul id="pgQuests"></ul>
       </div>
       <div class="card">
         <h2>Joueurs de ce tour</h2>
@@ -232,9 +236,10 @@ for g in GAMES:
     if g["key"] == "pof":
         body = body.replace("SUN", SUN)
     extra = part("plage.js") if g["key"] == "paille" else ""
-    html = HEAD.replace("{title}", g["title"]) + css + "</head><body>" + body + "<script>\n" + extra + g["js"] + "\n</script>\n<script src=\"client.js\"></script>\n</body></html>\n"
+    html = HEAD.replace("{title}", g["title"]) + css + "</head><body>" + body + "<script>\n" + extra + g["js"] + "\n</script>\n<script src=\"prog.js\"></script>\n<script src=\"client.js\"></script>\n</body></html>\n"
     open(os.path.join(OUT, g["file"]), "w", encoding="utf-8").write(html)
 shutil.copy(os.path.join(SRC, "client.js"), os.path.join(OUT, "client.js"))
+shutil.copy(os.path.join(SRC, "prog.js"), os.path.join(OUT, "prog.js"))
 shutil.copy(os.path.join(SRC, "index.html"), os.path.join(OUT, "index.html"))
 shutil.copy(os.path.join(SRC, "banque.html"), os.path.join(OUT, "banque.html"))
 print("Pages fabriquées dans", OUT)

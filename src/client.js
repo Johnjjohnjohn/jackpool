@@ -32,6 +32,7 @@
       jackpots = m.jackpots; nextDraw = m.nextDraw;
       $("who").textContent = me.name; $("drawNow").hidden = !me.admin;
       buildLevels(); sendMsg({ t: "sub", game: G.key, lvl });
+      if (window.JPProg) JPProg.update(m.prog);
     } else if (m.t === "table") {
       if (m.game !== G.key || m.lvl !== lvl) return;
       table = m; offset = m.now - Date.now();
@@ -43,8 +44,10 @@
     else if (m.t === "result") { if (m.game === G.key && m.lvl === lvl) onResult(m); }
     else if (m.t === "bigdraw") { if (m.game === G.key) onBigDraw(m); }
     else if (m.t === "biggain") { gainToast(m); confetti(); }
+    else if (m.t === "prog") { if (window.JPProg) JPProg.update(m); }
     else if (m.t === "error") {
-      if (m.req === "ticket" || m.req === "drawnow") { $("jpMsg").textContent = m.message; $("jpMsg").className = "note err"; }
+      if ((m.req === "buyskin" || m.req === "equip") && window.JPProg) JPProg.error(m.message);
+      else if (m.req === "ticket" || m.req === "drawnow") { $("jpMsg").textContent = m.message; $("jpMsg").className = "note err"; }
       else { $("msg").className = "msg glass lose"; $("msg").textContent = m.message; }
     }
     render();
@@ -208,6 +211,7 @@
   document.querySelectorAll(".felts button").forEach((b) => (b.onclick = () => setFelt(b.dataset.f)));
   { let f = G.felt || "vert"; try { f = localStorage.getItem("tapis-" + G.key) || f; } catch (e) {} setFelt(f); }
 
+  if (window.JPProg) JPProg.init(sendMsg);
   G.init(); G.reset("main"); $("msg").textContent = G.prompt;
   setInterval(render, 500);
   render(); connect();
